@@ -38,7 +38,9 @@ yarn-error.log*
 next-env.d.ts
 
 .genkit/*
+# Keep local env files ignored, but allow example template
 .env*
+!.env.example
 
 # firebase
 firebase-debug.log

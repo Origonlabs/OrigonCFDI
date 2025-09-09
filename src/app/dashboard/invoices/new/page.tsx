@@ -133,7 +133,7 @@ const ImpuestosDialog = ({
                             <SelectItem value="0.160000">16%</SelectItem>
                             <SelectItem value="0.080000">8%</SelectItem>
                             <SelectItem value="0.000000">0%</SelectItem>
-                            <SelectItem value="Exento">Exento</SelectItem>
+                            <SelectItem value="0.000000">Exento</SelectItem>
                         </SelectContent>
                     </Select>
                     <Button onClick={handleAddImpuesto}>Agregar</Button>

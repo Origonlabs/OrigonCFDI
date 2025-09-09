@@ -1,6 +1,6 @@
 # OrigonCFDI
 
-OrigonCFDI es una aplicación privada built con Next.js, TypeScript y Firebase para generar y administrar Comprobantes Fiscales Digitales por Internet (CFDI) en México.
+OrigonCFDI es una aplicación privada construida con Next.js, TypeScript, Drizzle (Postgres) y Firebase para generar y administrar Comprobantes Fiscales Digitales por Internet (CFDI) en México.
 
 ## Características principales
 
@@ -11,20 +11,19 @@ OrigonCFDI es una aplicación privada built con Next.js, TypeScript y Firebase p
 - Conversión de importes a letras (`numero-a-letras`)  
 - Dashboard responsivo con el nuevo sistema de rutas `/app` de Next.js  
 - Temas claros/oscuro con `next-themes`  
-- Políticas de seguridad HTTP vía Content Security Policy en `next.config.ts`
+- (Opcional) Políticas de seguridad HTTP vía Content Security Policy
 
 ## Tecnologías
 
-- Next.js 13 (App Router)  
+- Next.js (App Router)  
 - React + TypeScript  
-- Firebase (Auth, Firestore, Storage)  
-- Drizzle ORM (configurado en `drizzle.config.ts`)  
+- Firebase (Auth, Storage)  
+- Drizzle ORM + Postgres (configurado en `drizzle.config.ts`)  
 - xmlbuilder2 para armado de XML CFDI  
-- `@react-pdf/renderer` o librería similar para PDF  
+- `pdf-lib` para generar PDF  
 - Tailwind CSS + componentes personalizados  
 - Zod + React Hook Form para validación  
-- Vite (solo en librerías internas si aplica)  
-- ESLint, Prettier, husky
+- ESLint, Prettier
 
 ## Instalación y puesta en marcha
 
@@ -34,9 +33,12 @@ OrigonCFDI es una aplicación privada built con Next.js, TypeScript y Firebase p
    - NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN  
    - NEXT_PUBLIC_FIREBASE_PROJECT_ID  
    - NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET  
-   - FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY (si usas Admin SDK)  
-   - DB_URL o configuración de tu base de datos Postgres/MySQL  
-   - PAC_USER, PAC_PASSWORD, PAC_ENDPOINT  
+   - NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID  
+   - NEXT_PUBLIC_FIREBASE_APP_ID  
+   - FIREBASE_SERVICE_ACCOUNT_JSON (JSON en una sola línea)  
+   - DATABASE_URL (cadena de conexión Postgres/Neon)  
+   - FACTURALOPLUS_USER, FACTURALOPLUS_API_KEY  
+   - (Opcional) UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN
 3. Instala dependencias  
    ```bash
    npm install
@@ -62,7 +64,7 @@ OrigonCFDI es una aplicación privada built con Next.js, TypeScript y Firebase p
 │  ├─ types/             # Declaraciones y esquemas Zod
 │  └─ styles/            # Estilos globales y configuración Tailwind
 ├─ drizzle.config.ts     # Configuración de ORM
-├─ next.config.ts        # Configuración de Next.js y CSP
+├─ next.config.js        # Configuración de Next.js
 ├─ .env.example
 └─ package.json
 ```
@@ -74,21 +76,20 @@ OrigonCFDI es una aplicación privada built con Next.js, TypeScript y Firebase p
 3. Se arma el XML con xmlbuilder2 y se envía al PAC  
 4. El PAC devuelve el XML timbrado con sello digital  
 5. Se genera el PDF y el código QR para descarga/visualización  
-6. La factura queda almacenada en Firestore con referencia al timbre
+6. Se guarda el registro en la base de datos (Postgres/Drizzle) y los archivos (PDF/XML) en Firebase Storage
 
 ## Testing
 
-- Unit y componentes con Jest + React Testing Library  
-- Ejecución:  
-  ```bash
-  npm run test
-  ```
+- Aún no hay una suite de tests incluida en el repo.  
+- Recomendado: habilitar `npm run typecheck` y `next lint` en CI/CD.
 
 ## Mantenimiento
 
 - Asegúrate de mantener actualizadas las credenciales del PAC y Firebase.  
-- Revisar `next.config.ts` si agregas nuevos dominios de imágenes o cambias CSP.  
+- Revisa `next.config.js` si agregas nuevos dominios de imágenes.  
 - Actualiza `drizzle.config.ts` y tus migraciones cuando modifiques el esquema de la base de datos.
+
+Nota: Los archivos timbrados (PDF/XML) se publican actualmente en Firebase Storage. Para entornos productivos, considera restringir acceso (URLs firmadas o reglas por usuario) en lugar de `makePublic()`.
 
 ---
 

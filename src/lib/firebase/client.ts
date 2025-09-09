@@ -27,9 +27,7 @@ const app = firebaseEnabled
     : initializeApp(firebaseConfig)
   : null;
 
-const auth = app ? getAuth(app, {
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-}) : null;
+const auth = app ? getAuth(app) : null;
 const storage = app ? getStorage(app) : null;
 
 export { app, auth, storage, firebaseEnabled };
