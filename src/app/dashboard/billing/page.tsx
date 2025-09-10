@@ -78,7 +78,7 @@ const plans = [
 
 export default function BillingPage() {
   const router = useRouter();
-  const [user, authLoading] = useAuthState(auth);
+  const [user, authLoading] = useAuthState(auth!);
   const [activePlan, setActivePlan] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('annual');
