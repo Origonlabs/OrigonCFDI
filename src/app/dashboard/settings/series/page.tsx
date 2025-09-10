@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { AddCircleRegular, ArrowClockwiseRegular, DeleteRegular, EditRegular } from "@opendex-origon/icons";
+import { AddCircleRegular, ArrowClockwiseRegular, DeleteRegular, EditRegular } from "@/icons/fluent";
 import { User } from "firebase/auth";
 
 import { auth, firebaseEnabled } from "@/lib/firebase/client";

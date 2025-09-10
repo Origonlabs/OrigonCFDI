@@ -26,7 +26,7 @@ import {
   DocumentSettingsRegular,
   DatabaseRegular,
   ChatRegular,
-} from '@opendex-origon/icons';
+} from '@/icons/fluent';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {

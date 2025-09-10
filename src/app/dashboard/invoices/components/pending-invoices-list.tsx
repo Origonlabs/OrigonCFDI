@@ -1,6 +1,6 @@
 "use client";
 
-import { MoreHorizontalRegular, ArrowDownloadRegular, MailRegular, FilterRegular, AddRegular, DismissCircleRegular, ChevronLeftRegular, ChevronRightRegular, EyeRegular, DocumentRegular, ChevronDoubleLeftRegular, ChevronDoubleRightRegular, CheckmarkRegular } from "@fluentui/react-icons"
+import { MoreHorizontalRegular, ArrowDownloadRegular, MailRegular, FilterRegular, AddRegular, DismissCircleRegular, ChevronLeftRegular, ChevronRightRegular, EyeRegular, DocumentRegular, ChevronDoubleLeftRegular, ChevronDoubleRightRegular, CheckmarkRegular } from "@/icons/fluent"
 import { useState, useEffect, useCallback } from "react"
 import { User } from "firebase/auth"
 

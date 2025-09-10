@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import * as MenubarPrimitive from "@radix-ui/react-menubar"
-import { CheckmarkRegular, ChevronRightRegular, CircleRegular } from "@opendex-origon/icons"
+import { CheckmarkRegular, ChevronRightRegular, CircleRegular } from "@/icons/fluent"
 
 import { cn } from "@/lib/utils"
 

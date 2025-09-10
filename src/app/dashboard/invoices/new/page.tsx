@@ -4,7 +4,7 @@
 import * as React from "react"
 import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
-import { ChevronLeftRegular, AddCircleRegular, DeleteRegular, DocumentRegular, QuestionCircleRegular, EditRegular } from "@fluentui/react-icons"
+import { ChevronLeftRegular, AddCircleRegular, DeleteRegular, DocumentRegular, QuestionCircleRegular, EditRegular } from "@/icons/fluent"
 import { useForm, useFieldArray, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"

@@ -11,7 +11,7 @@ import { auth, firebaseEnabled } from '@/lib/firebase/client';
 import { useToast } from "@/hooks/use-toast";
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { MailRegular } from "@opendex-origon/icons";
+import { MailRegular } from "@/icons/fluent";
 
 export default function ResetPasswordPage() {
   const router = useRouter();

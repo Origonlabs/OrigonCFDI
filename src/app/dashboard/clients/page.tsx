@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { AddCircleRegular, MoreHorizontalRegular, FilterRegular } from "@fluentui/react-icons";
+import { AddCircleRegular, MoreHorizontalRegular, FilterRegular } from "@/icons/fluent";
 import { User } from "firebase/auth";
 import Link from "next/link";
 import { ClientForm } from "@/components/client-form";

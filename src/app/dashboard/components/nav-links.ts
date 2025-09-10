@@ -8,7 +8,7 @@ import {
   DatabaseRegular,
   ChatRegular,
   SettingsRegular,
-} from "@opendex-origon/icons";
+} from "@/icons/fluent";
 
 export const navigationLinks = [
   {

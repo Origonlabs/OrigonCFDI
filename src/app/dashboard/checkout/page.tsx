@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import GooglePayButton from "@google-pay/button-react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeftRegular, CreditCardRegular, WalletRegular, BuildingBankRegular, CheckmarkCircleFilled, CheckmarkCircleRegular, InfoRegular, ChevronDownRegular, ReceiptRegular } from "@fluentui/react-icons";
+import { ArrowLeftRegular, CreditCardRegular, WalletRegular, BuildingBankRegular, CheckmarkCircleFilled, CheckmarkCircleRegular, InfoRegular, ChevronDownRegular, ReceiptRegular } from "@/icons/fluent";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import Image from "next/image";
@@ -258,4 +258,3 @@ export default function CheckoutPage() {
         </div>
     );
 }
-

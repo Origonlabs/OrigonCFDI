@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox"
-import { CheckmarkRegular } from "@opendex-origon/icons"
+import { CheckmarkRegular } from "@/icons/fluent"
 
 import { cn } from "@/lib/utils"
 

@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { GoogleAuthProvider, OAuthProvider, signInWithPopup, signInWithEmailAndPassword, getMultiFactorResolver } from 'firebase/auth';
-import { EyeRegular, EyeOffRegular } from '@opendex-origon/icons';
+import { EyeRegular, EyeOffRegular } from '@/icons/fluent';
 
 import { cn } from "@/lib/utils"
 import { auth, firebaseEnabled } from '@/lib/firebase/client';

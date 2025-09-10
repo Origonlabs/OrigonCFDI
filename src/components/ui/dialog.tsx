@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
-import { DismissRegular } from "@opendex-origon/icons"
+import { DismissRegular } from "@/icons/fluent"
 
 import { cn } from "@/lib/utils"
 

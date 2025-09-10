@@ -16,7 +16,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { saveCompanyProfile } from '@/app/actions/companies';
 import { type ProfileFormValues, signupSchema, type SignupFormValues } from '@/lib/schemas';
-import { EyeRegular, EyeOffRegular } from '@opendex-origon/icons';
+import { EyeRegular, EyeOffRegular } from '@/icons/fluent';
 
 import {
   Form,

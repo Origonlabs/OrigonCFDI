@@ -20,10 +20,6 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
-      "@opendex-origon/icons": ["./src/shims/opendex-icons"],
-      "lucide-react": ["./src/shims/lucide-react"],
-      "@fluentui/react-icons": ["./src/shims/fluentui-react-icons"]
-      ,
       "genkit": ["./src/shims/genkit"],
       "@genkit-ai/googleai": ["./src/shims/genkit-googleai"]
     }

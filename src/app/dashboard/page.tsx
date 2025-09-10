@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { User } from "firebase/auth";
-import { AlertCircleRegular, InfoRegular, CheckmarkCircleRegular } from "@opendex-origon/icons";
+import { AlertCircleRegular, InfoRegular, CheckmarkCircleRegular } from "@/icons/fluent";
 
 import {
   Card,
