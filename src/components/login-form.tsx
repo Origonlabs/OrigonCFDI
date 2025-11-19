@@ -46,12 +46,12 @@ const GoogleIcon = () => (
 );
 
 const MicrosoftIcon = () => (
-    <svg role="img" viewBox="0 0 24 24" className="mr-2 h-4 w-4">
-        <path fill="#F25022" d="M11.25 11.25H2.5V2.5h8.75v8.75z" />
-        <path fill="#7FBA00" d="M21.5 11.25h-8.75V2.5h8.75v8.75z" />
-        <path fill="#00A4EF" d="M11.25 21.5H2.5v-8.75h8.75V21.5z" />
-        <path fill="#FFB900" d="M21.5 21.5h-8.75v-8.75h8.75V21.5z" />
-    </svg>
+  <svg role="img" viewBox="0 0 24 24" className="mr-2 h-4 w-4">
+    <path fill="#F25022" d="M11.25 11.25H2.5V2.5h8.75v8.75z" />
+    <path fill="#7FBA00" d="M21.5 11.25h-8.75V2.5h8.75v8.75z" />
+    <path fill="#00A4EF" d="M11.25 21.5H2.5v-8.75h8.75V21.5z" />
+    <path fill="#FFB900" d="M21.5 21.5h-8.75v-8.75h8.75V21.5z" />
+  </svg>
 );
 
 
@@ -65,22 +65,25 @@ export function LoginForm({
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  
+
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!firebaseEnabled || !auth) {
       toast({ title: "Error de Configuración", description: "Firebase no está configurado.", variant: "destructive", });
       return;
     }
-    
+
     setIsSubmitting(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
       router.push('/dashboard');
-    } catch (error: any) {
+    } catch (error) {
+      const authError = error as { code?: string };
       let description = "Ocurrió un error inesperado.";
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+      if (authError.code === 'auth/user-not-found' || authError.code === 'auth/wrong-password' || authError.code === 'auth/invalid-credential') {
         description = "El correo electrónico o la contraseña son incorrectos.";
+      } else if (authError.code === 'auth/too-many-requests') {
+        description = "Demasiados intentos fallidos. Por favor, inténtalo de nuevo más tarde.";
       }
       toast({ title: "Error de Autenticación", description, variant: "destructive" });
     } finally {
@@ -98,8 +101,9 @@ export function LoginForm({
     try {
       await signInWithPopup(auth, provider);
       router.push('/dashboard');
-    } catch (error: any) {
-      if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
+    } catch (error) {
+      const authError = error as { code?: string };
+      if (authError.code === 'auth/popup-closed-by-user' || authError.code === 'auth/cancelled-popup-request') {
         console.log("Sign-in popup closed by user.");
       } else {
         console.error("Error al iniciar sesión con Microsoft", error);
@@ -120,13 +124,15 @@ export function LoginForm({
     try {
       await signInWithPopup(auth, provider);
       router.push('/dashboard');
-    } catch (error: any) {
-      if (error.code === 'auth/popup-closed-by-user') {
+    } catch (error) {
+      const authError = error as { code?: string };
+      if (authError.code === 'auth/popup-closed-by-user') {
         console.log("Sign-in popup closed by user.");
         return;
       }
 
-      if (error.code === 'auth/multi-factor-required') {
+      if (authError.code === 'auth/multi-factor-required') {
+        // @ts-ignore - getMultiFactorResolver types might be tricky with unknown error
         const resolver = getMultiFactorResolver(auth, error);
         console.log('MFA is required. Resolver:', resolver);
         toast({
@@ -142,7 +148,7 @@ export function LoginForm({
       setIsSubmitting(false);
     }
   };
-  
+
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card className="border-0">
@@ -154,65 +160,65 @@ export function LoginForm({
         </CardHeader>
         <CardContent>
           <div className="grid gap-6">
-              <div className="flex flex-col gap-4">
-                <Button variant="secondary" className="w-full" onClick={handleMicrosoftSignIn} disabled>
-                  <MicrosoftIcon />
-                  Iniciar con Microsoft
-                </Button>
-                <Button variant="secondary" className="w-full" onClick={handleGoogleSignIn} disabled={!firebaseEnabled || isSubmitting}>
-                  <GoogleIcon />
-                  Iniciar con Google
-                </Button>
-              </div>
-              <div className="after:border-border relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t">
-                <span className="bg-card text-muted-foreground relative z-10 px-2">
-                  O continuar con
-                </span>
-              </div>
-              <form onSubmit={handleEmailSignIn}>
-                <div className="grid gap-6">
-                    <div className="grid gap-3">
-                        <Label htmlFor="email">Correo electrónico</Label>
-                        <Input id="email" type="email" placeholder="GlobalID@Company.com" required value={email} onChange={(e) => setEmail(e.target.value)} disabled={!firebaseEnabled || isSubmitting} />
-                    </div>
-                    <div className="grid gap-3">
-                        <div className="flex items-center">
-                            <Label htmlFor="password">Contraseña</Label>
-                            <Link href="/reset-password" className="ml-auto text-sm underline-offset-4 hover:underline">
-                            ¿Olvidaste tu contraseña?
-                            </Link>
-                        </div>
-                        <div className="relative">
-                            <Input id="password" type={showPassword ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)} disabled={!firebaseEnabled || isSubmitting} />
-                            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground">
-                                {showPassword ? <EyeOffRegular className="h-4 w-4" /> : <EyeRegular className="h-4 w-4" />}
-                            </button>
-                        </div>
-                    </div>
-                    <Button type="submit" className="w-full" disabled={!firebaseEnabled || isSubmitting}>
-                        {isSubmitting ? 'Iniciando...' : 'Iniciar Sesión'}
-                    </Button>
-                    {!firebaseEnabled && (
-                        <p className="text-center text-xs text-destructive pt-2">
-                        La configuración de Firebase está incompleta. La autenticación está deshabilitada.
-                        </p>
-                    )}
-                </div>
-              </form>
-               <div className="after:border-border relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t">
-                <span className="bg-card text-muted-foreground relative z-10 px-2">
-                  ¿Eres de una empresa?
-                </span>
-              </div>
-               <Button variant="outline" className="w-full" onClick={() => router.push('/login')} disabled={isSubmitting}>
-                Iniciar Sesión con SSO
+            <div className="flex flex-col gap-4">
+              <Button variant="secondary" className="w-full" onClick={handleMicrosoftSignIn} disabled>
+                <MicrosoftIcon />
+                Iniciar con Microsoft
               </Button>
-              <div className="text-center text-sm">
-                ¿No tienes una cuenta?{" "}
-                <Link href="/signup" className="underline underline-offset-4">
-                  Regístrate
-                </Link>
+              <Button variant="secondary" className="w-full" onClick={handleGoogleSignIn} disabled={!firebaseEnabled || isSubmitting}>
+                <GoogleIcon />
+                Iniciar con Google
+              </Button>
+            </div>
+            <div className="after:border-border relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t">
+              <span className="bg-card text-muted-foreground relative z-10 px-2">
+                O continuar con
+              </span>
+            </div>
+            <form onSubmit={handleEmailSignIn}>
+              <div className="grid gap-6">
+                <div className="grid gap-3">
+                  <Label htmlFor="email">Correo electrónico</Label>
+                  <Input id="email" type="email" placeholder="GlobalID@Company.com" required value={email} onChange={(e) => setEmail(e.target.value)} disabled={!firebaseEnabled || isSubmitting} />
+                </div>
+                <div className="grid gap-3">
+                  <div className="flex items-center">
+                    <Label htmlFor="password">Contraseña</Label>
+                    <Link href="/reset-password" className="ml-auto text-sm underline-offset-4 hover:underline">
+                      ¿Olvidaste tu contraseña?
+                    </Link>
+                  </div>
+                  <div className="relative">
+                    <Input id="password" type={showPassword ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)} disabled={!firebaseEnabled || isSubmitting} />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground">
+                      {showPassword ? <EyeOffRegular className="h-4 w-4" /> : <EyeRegular className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+                <Button type="submit" className="w-full" disabled={!firebaseEnabled || isSubmitting}>
+                  {isSubmitting ? 'Iniciando...' : 'Iniciar Sesión'}
+                </Button>
+                {!firebaseEnabled && (
+                  <p className="text-center text-xs text-destructive pt-2">
+                    La configuración de Firebase está incompleta. La autenticación está deshabilitada.
+                  </p>
+                )}
               </div>
+            </form>
+            <div className="after:border-border relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t">
+              <span className="bg-card text-muted-foreground relative z-10 px-2">
+                ¿Eres de una empresa?
+              </span>
+            </div>
+            <Button variant="outline" className="w-full" onClick={() => router.push('/login')} disabled={isSubmitting}>
+              Iniciar Sesión con SSO
+            </Button>
+            <div className="text-center text-sm">
+              ¿No tienes una cuenta?{" "}
+              <Link href="/signup" className="underline underline-offset-4">
+                Regístrate
+              </Link>
+            </div>
           </div>
         </CardContent>
       </Card>

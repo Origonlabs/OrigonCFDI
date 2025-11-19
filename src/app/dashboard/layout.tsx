@@ -44,7 +44,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { auth } from '@/lib/firebase/client';
-import { navigationLinks } from './components/nav-links';
+import { filterNavigationByRole } from './components/nav-links';
+import { useUserRole } from '@/hooks/use-user-role';
+import { getRoleDisplayName } from '@/lib/roles';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
@@ -61,11 +63,17 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [user, loading] = useAuthState(auth!);
+  const { role } = useUserRole();
   const router = useRouter();
   const pathname = usePathname();
   const [openCategory, setOpenCategory] = React.useState<string | undefined>();
   const [isAboutDialogOpen, setIsAboutDialogOpen] = React.useState(false);
   const isSettingsActive = pathname.startsWith('/dashboard/settings');
+  
+  // Filtrar navegación según el rol del usuario
+  const filteredNavigation = React.useMemo(() => {
+    return filterNavigationByRole(role);
+  }, [role]);
 
   useSessionTimeout();
 
@@ -76,11 +84,11 @@ export default function DashboardLayout({
   }, [user, loading, router]);
 
   React.useEffect(() => {
-    const activeItem = navigationLinks.find((item: any) =>
+    const activeItem = filteredNavigation.find((item: any) =>
       item.sublinks?.some((link: any) => link.href !== '#' && pathname.startsWith(link.href))
     );
     setOpenCategory(activeItem?.title);
-  }, [pathname]);
+  }, [pathname, filteredNavigation]);
 
   const handleSignOut = async () => {
     if (auth) {
@@ -106,7 +114,7 @@ export default function DashboardLayout({
   };
 
 
-  const mainLinks = navigationLinks.slice(0, -1);
+  const mainLinks = filteredNavigation.slice(0, -1);
   // We will handle settings link separately as a dropdown.
 
   const renderLinkGroup = (item: any) => {
@@ -230,6 +238,11 @@ export default function DashboardLayout({
                   <p className="text-xs leading-none text-muted-foreground">
                     {user?.email ?? 'tienda@example.com'}
                   </p>
+                  {role && (
+                    <p className="text-xs leading-none text-muted-foreground mt-1">
+                      {getRoleDisplayName(role)}
+                    </p>
+                  )}
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />

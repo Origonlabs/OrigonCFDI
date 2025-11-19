@@ -68,6 +68,10 @@ export default function SignupPage() {
       if (user) {
         await updateProfile(user, { displayName: `${data.nombre} ${data.apellidos}` });
         
+        // Crear usuario en la BD con rol 'company' por defecto
+        const { createUser } = await import('../actions/users');
+        await createUser(user.uid, data.email, 'company');
+        
         // We need to adapt the profile data to what `saveCompanyProfile` expects.
         // This is a partial mapping based on the new form.
         const profileData: Partial<ProfileFormValues> = {

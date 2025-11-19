@@ -76,7 +76,34 @@ export default function SettingsPage() {
     resolver: zodResolver(passwordChangeSchema),
     defaultValues: { currentPassword: "", newPassword: "", confirmPassword: "" },
   });
-  
+
+  const fetchProfile = useCallback(async (uid: string) => {
+      const [profileResponse, certificateResponse] = await Promise.all([
+          getCompanyProfile(uid),
+          getCertificateDetails(uid)
+      ]);
+
+      if (profileResponse.success && profileResponse.data) {
+        profileForm.reset(profileResponse.data as any);
+      } else if (!profileResponse.success && profileResponse.message) {
+        // toast({ title: "Error al cargar perfil", description: profileResponse.message, variant: "destructive" });
+      }
+
+      if (certificateResponse.success && certificateResponse.data) {
+          const processedCertificate = {
+            ...certificateResponse.data,
+            validFrom: certificateResponse.data.validFrom instanceof Date
+              ? certificateResponse.data.validFrom.toISOString()
+              : certificateResponse.data.validFrom,
+            validTo: certificateResponse.data.validTo instanceof Date
+              ? certificateResponse.data.validTo.toISOString()
+              : certificateResponse.data.validTo
+          };
+          setCertificate(processedCertificate as Certificate);
+      }
+      setLoading(false);
+  }, [profileForm]);
+
   useEffect(() => {
     if (!firebaseEnabled || !auth) {
       setLoading(false);
@@ -98,34 +125,7 @@ export default function SettingsPage() {
       }
     });
     return () => unsubscribe();
-  }, []);
-
-  const fetchProfile = useCallback(async (uid: string) => {
-      const [profileResponse, certificateResponse] = await Promise.all([
-          getCompanyProfile(uid),
-          getCertificateDetails(uid)
-      ]);
-      
-      if (profileResponse.success && profileResponse.data) {
-        profileForm.reset(profileResponse.data as any);
-      } else if (!profileResponse.success && profileResponse.message) {
-        // toast({ title: "Error al cargar perfil", description: profileResponse.message, variant: "destructive" });
-      }
-
-      if (certificateResponse.success && certificateResponse.data) {
-          const processedCertificate = {
-            ...certificateResponse.data,
-            validFrom: certificateResponse.data.validFrom instanceof Date 
-              ? certificateResponse.data.validFrom.toISOString() 
-              : certificateResponse.data.validFrom,
-            validTo: certificateResponse.data.validTo instanceof Date 
-              ? certificateResponse.data.validTo.toISOString() 
-              : certificateResponse.data.validTo
-          };
-          setCertificate(processedCertificate as Certificate);
-      }
-      setLoading(false);
-  }, [profileForm]);
+  }, [fetchProfile]);
 
   async function onProfileSubmit(data: ProfileFormValues) {
     if (!user) {

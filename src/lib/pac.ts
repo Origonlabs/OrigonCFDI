@@ -11,8 +11,11 @@ const PAC_API_KEY = process.env.FACTURALOPLUS_API_KEY;
 interface PacSuccessResponse {
   data: {
     xml: string; // Base64 encoded stamped XML
-  },
-  [key: string]: any;
+  };
+  status?: string;
+  response?: string;
+  message?: string;
+  [key: string]: unknown; // Permite propiedades adicionales pero con tipo más seguro
 }
 
 export async function stampWithFacturaLoPlus(xmlString: string): Promise<{ success: true; stampedXml: string; uuid: string; stampDate: string; } | { success: false; message: string; }> {

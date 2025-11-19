@@ -1,5 +1,18 @@
 
-import { pgTable, serial, text, varchar, timestamp, numeric, integer, pgEnum, boolean } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, varchar, timestamp, numeric, integer, pgEnum, boolean, index } from "drizzle-orm/pg-core";
+
+// --- Roles de Usuario ---
+export const userRoleEnum = pgEnum('user_role', ['admin', 'company', 'accountant', 'client']);
+
+// --- Usuarios ---
+export const users = pgTable('users', {
+  id: serial('id').primaryKey(),
+  userId: varchar('user_id', { length: 256 }).notNull().unique(), // Firebase UID
+  email: varchar('email', { length: 256 }).notNull().unique(),
+  role: userRoleEnum('role').default('company').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
 
 // --- Clientes ---
 export const clients = pgTable('clients', {
@@ -21,14 +34,17 @@ export const clients = pgTable('clients', {
   street: text('street'),
   exteriorNumber: varchar('exterior_number', { length: 50 }),
   interiorNumber: varchar('interior_number', { length: 50 }),
-  
+
   // Contacto y Preferencias
   phone: varchar('phone', { length: 20 }),
   paymentMethod: varchar('payment_method', { length: 3 }),
   paymentForm: varchar('payment_form', { length: 3 }),
   usoCfdi: varchar('uso_cfdi', { length: 4 }),
   reference: text('reference'),
-});
+}, (table) => ({
+  userIdIdx: index('clients_user_id_idx').on(table.userId),
+  rfcIdx: index('clients_rfc_idx').on(table.rfc),
+}));
 
 export const clientBankAccounts = pgTable('client_bank_accounts', {
   id: serial('id').primaryKey(),
@@ -132,7 +148,13 @@ export const invoices = pgTable('invoices', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   uuid: varchar('uuid', { length: 36 }),
   stampDate: timestamp('stamp_date'),
-});
+}, (table) => ({
+  userIdIdx: index('invoices_user_id_idx').on(table.userId),
+  statusIdx: index('invoices_status_idx').on(table.status),
+  createdAtIdx: index('invoices_created_at_idx').on(table.createdAt),
+  clientIdIdx: index('invoices_client_id_idx').on(table.clientId),
+  uuidIdx: index('invoices_uuid_idx').on(table.uuid),
+}));
 
 export const invoiceItems = pgTable('invoice_items', {
   id: serial('id').primaryKey(),

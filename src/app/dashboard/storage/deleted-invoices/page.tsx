@@ -67,7 +67,7 @@ export default function DeletedInvoicesPage() {
     const response = await getDeletedInvoices(uid);
 
     if (response.success && response.data) {
-      setInvoices(response.data as DeletedInvoice[]);
+      setInvoices(response.data as unknown as DeletedInvoice[]);
     } else {
       toast({
         title: "Error",

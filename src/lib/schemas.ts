@@ -16,8 +16,9 @@ export const clientSchema = z.object({
   name: z.string().min(1, { message: "El nombre o razón social es obligatorio." }),
   rfc: z.string()
     .min(12, { message: "El RFC debe tener 12 o 13 caracteres." })
-    .max(13, { message: "El RFC debe tener 12 o 13 caracteres." }),
-  zip: z.string().length(5, { message: "El código postal debe tener 5 dígitos." }),
+    .max(13, { message: "El RFC debe tener 12 o 13 caracteres." })
+    .regex(/^[A-Z&Ñ]{3,4}\d{6}(?:[A-Z\d]{3})?$/, { message: "El formato del RFC no es válido." }),
+  zip: z.string().regex(/^\d{5}$/, { message: "El código postal debe ser de 5 dígitos numéricos." }),
   taxRegime: z.string().min(1, { message: "El régimen fiscal es obligatorio." }),
   country: z.string().optional(),
   state: z.string().optional(),
@@ -41,7 +42,8 @@ export const profileFormSchema = z.object({
   companyName: z.string().min(1, { message: "La razón social es obligatoria." }),
   rfc: z.string()
     .min(12, { message: "El RFC debe tener 12 o 13 caracteres." })
-    .max(13, { message: "El RFC debe tener 12 o 13 caracteres." }),
+    .max(13, { message: "El RFC debe tener 12 o 13 caracteres." })
+    .regex(/^[A-Z&Ñ]{3,4}\d{6}(?:[A-Z\d]{3})?$/, { message: "El formato del RFC no es válido." }),
   taxRegime: z.string().min(1, { message: "El régimen fiscal es obligatorio." }),
   street: z.string().optional(),
   exteriorNumber: z.string().optional(),
@@ -50,14 +52,14 @@ export const profileFormSchema = z.object({
   municipality: z.string().optional(),
   state: z.string().optional(),
   city: z.string().optional(),
-  zip: z.string().optional(),
+  zip: z.string().regex(/^\d{5}$/, { message: "El código postal debe ser de 5 dígitos numéricos." }).optional(),
   phone: z.string().optional(),
   phone2: z.string().optional(),
   fax: z.string().optional(),
   contadorEmail: z.string().email({ message: "El correo del contador no es válido." }).optional().or(z.literal('')),
   web: z.string().url({ message: "La URL del sitio web no es válida." }).optional().or(z.literal('')),
   commercialMessage: z.string().optional(),
-  logoUrl: z.string().url({ message: "Por favor, introduce una URL válida para el logo."}).optional().or(z.literal('')),
+  logoUrl: z.string().url({ message: "Por favor, introduce una URL válida para el logo." }).optional().or(z.literal('')),
   defaultEmailMessage: z.string().optional(),
   templateCfdi33: z.string().optional(),
   templateCfdi40: z.string().optional(),
@@ -93,6 +95,11 @@ const conceptSchema = z.object({
   objetoImpuesto: z.string().min(1, "Selecciona el objeto de impuesto."),
   amount: z.coerce.number(),
   impuestos: z.array(impuestoSchema).optional(),
+  ivaTasa: z.number().optional(),
+  retencionIsr: z.boolean().optional(),
+  retencionIsrTasa: z.number().optional(),
+  retencionIva: z.boolean().optional(),
+  retencionIvaTasa: z.number().optional(),
 });
 export type Concepto = z.infer<typeof conceptSchema>;
 
@@ -111,13 +118,13 @@ export const invoiceSchema = z.object({
   relationType: z.string().optional(),
   relatedCfdis: z.array(relatedCfdiSchema).optional(),
 }).refine(data => {
-    if (data.relatedCfdis && data.relatedCfdis.length > 0) {
-        return !!data.relationType;
-    }
-    return true;
+  if (data.relatedCfdis && data.relatedCfdis.length > 0) {
+    return !!data.relationType;
+  }
+  return true;
 }, {
-    message: "Debes seleccionar un tipo de relación si agregas CFDI relacionados.",
-    path: ["relationType"],
+  message: "Debes seleccionar un tipo de relación si agregas CFDI relacionados.",
+  path: ["relationType"],
 });
 export type InvoiceFormValues = z.infer<typeof invoiceSchema>;
 
@@ -155,13 +162,13 @@ export const paymentSchema = z.object({
   relationType: z.string().optional(),
   relatedCfdis: z.array(relatedCfdiSchema).optional(),
 }).refine(data => {
-    if (data.relatedCfdis && data.relatedCfdis.length > 0) {
-        return !!data.relationType;
-    }
-    return true;
+  if (data.relatedCfdis && data.relatedCfdis.length > 0) {
+    return !!data.relationType;
+  }
+  return true;
 }, {
-    message: "Debes seleccionar un tipo de relación si agregas CFDI relacionados.",
-    path: ["relationType"],
+  message: "Debes seleccionar un tipo de relación si agregas CFDI relacionados.",
+  path: ["relationType"],
 });
 export type PaymentFormValues = z.infer<typeof paymentSchema>;
 
@@ -190,7 +197,12 @@ export type SerieFormValues = z.infer<typeof serieSchema>;
 // --- Password Change ---
 export const passwordChangeSchema = z.object({
   currentPassword: z.string().min(1, "La contraseña actual es obligatoria."),
-  newPassword: z.string().min(6, "La nueva contraseña debe tener al menos 6 caracteres."),
+  newPassword: z.string()
+    .min(8, "La nueva contraseña debe tener al menos 8 caracteres.")
+    .regex(/[A-Z]/, "Debe contener al menos una mayúscula.")
+    .regex(/[a-z]/, "Debe contener al menos una minúscula.")
+    .regex(/[0-9]/, "Debe contener al menos un número.")
+    .regex(/[^A-Za-z0-9]/, "Debe contener al menos un carácter especial."),
   confirmPassword: z.string(),
 }).refine(data => data.newPassword === data.confirmPassword, {
   message: "Las nuevas contraseñas no coinciden.",
@@ -203,29 +215,32 @@ export type PasswordChangeValues = z.infer<typeof passwordChangeSchema>;
 const MAX_FILE_SIZE = 500000; // 500KB
 
 export const signupSchema = z.object({
-    nombre: z.string().min(1, "El nombre es requerido."),
-    apellidos: z.string().min(1, "Los apellidos son requeridos."),
-    usuario: z.string().min(1, "El usuario es requerido."),
-    email: z.string().email({ message: "Por favor, introduce un correo válido." }),
-    confirmEmail: z.string().email(),
-    rfc: z.string().min(12, "El RFC debe tener 12 o 13 caracteres.").max(13, "El RFC debe tener 12 o 13 caracteres."),
-    passwordCertificado: z.string().min(1, "La contraseña del certificado es requerida."),
-    archivoCer: z
-      .any()
-      .refine((file) => !!file, "El archivo .cer es obligatorio.")
-      .refine((file) => file?.size <= MAX_FILE_SIZE, `El tamaño máximo es 500KB.`)
-      .refine(
-        (file) => file?.name?.endsWith(".cer"),
-        "Solo se aceptan archivos .cer"
-      ),
-    archivoKey: z
-      .any()
-      .refine((file) => !!file, "El archivo .key es obligatorio.")
-      .refine((file) => file?.size <= MAX_FILE_SIZE, `El tamaño máximo es 500KB.`)
-      .refine(
-        (file) => file?.name?.endsWith(".key"),
-        "Solo se aceptan archivos .key"
-      ),
+  nombre: z.string().min(1, "El nombre es requerido."),
+  apellidos: z.string().min(1, "Los apellidos son requeridos."),
+  usuario: z.string().min(1, "El usuario es requerido."),
+  email: z.string().email({ message: "Por favor, introduce un correo válido." }),
+  confirmEmail: z.string().email(),
+  rfc: z.string()
+    .min(12, "El RFC debe tener 12 o 13 caracteres.")
+    .max(13, "El RFC debe tener 12 o 13 caracteres.")
+    .regex(/^[A-Z&Ñ]{3,4}\d{6}(?:[A-Z\d]{3})?$/, { message: "El formato del RFC no es válido." }),
+  passwordCertificado: z.string().min(1, "La contraseña del certificado es requerida."),
+  archivoCer: z
+    .any()
+    .refine((file) => !!file, "El archivo .cer es obligatorio.")
+    .refine((file) => file?.size <= MAX_FILE_SIZE, `El tamaño máximo es 500KB.`)
+    .refine(
+      (file) => file?.name?.endsWith(".cer"),
+      "Solo se aceptan archivos .cer"
+    ),
+  archivoKey: z
+    .any()
+    .refine((file) => !!file, "El archivo .key es obligatorio.")
+    .refine((file) => file?.size <= MAX_FILE_SIZE, `El tamaño máximo es 500KB.`)
+    .refine(
+      (file) => file?.name?.endsWith(".key"),
+      "Solo se aceptan archivos .key"
+    ),
 }).refine(data => data.email === data.confirmEmail, {
   message: "Los correos electrónicos no coinciden.",
   path: ["confirmEmail"],

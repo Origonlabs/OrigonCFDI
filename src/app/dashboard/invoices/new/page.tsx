@@ -257,7 +257,7 @@ export default function NewInvoicePage() {
       setProgress(newProgress);
     });
     return () => subscription.unsubscribe();
-  }, [form.watch]);
+  }, [form]);
 
 
   useEffect(() => {

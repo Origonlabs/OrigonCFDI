@@ -9,15 +9,21 @@ import { revalidatePath } from "next/cache";
 import { PDFDocument, rgb, StandardFonts, PDFFont } from "pdf-lib";
 import { create } from 'xmlbuilder2';
 import QRCode from 'qrcode';
-import { adminStorage } from "@/lib/firebase/admin";
 import { Buffer } from 'buffer';
-// import { numeroALetras } from 'numero-a-letras';
-const numeroALetras = require('numero-a-letras').numeroALetras;
+import { numeroALetras } from 'numero-a-letras';
 import { stampWithFacturaLoPlus } from "@/lib/pac";
 import { invoiceSchema, type InvoiceFormValues } from "@/lib/schemas";
 import { getRateLimiter } from "@/lib/rate-limiter";
+import { checkUserPermission } from "@/lib/permissions";
+import { signCFDI } from "@/lib/csd-signer";
+import { uploadInvoiceFiles } from "@/lib/storage";
 
-export const getInvoices = async (userId: string) => {
+interface PaginationOptions {
+  page?: number;
+  limit?: number;
+}
+
+export const getInvoices = async (userId: string, options: PaginationOptions = {}) => {
   if (!db) {
     return { success: false, message: "Error de configuración: La conexión con la base de datos no está disponible." };
   }
@@ -25,15 +31,43 @@ export const getInvoices = async (userId: string) => {
     if (!userId) {
       return { success: false, message: "Usuario no autenticado." };
     }
+
+    const page = options.page || 1;
+    const limit = options.limit || 50;
+    const offset = (page - 1) * limit;
+
+    // Obtener total de registros para paginación
+    const countResult = await db
+      .select({ count: invoices.id })
+      .from(invoices)
+      .where(eq(invoices.userId, userId));
+
+    const total = countResult.length;
+    const totalPages = Math.ceil(total / limit);
+
+    // Obtener datos paginados
     const data = await db
       .select()
       .from(invoices)
       .leftJoin(clients, eq(invoices.clientId, clients.id))
       .where(and(eq(invoices.userId, userId), eq(clients.userId, userId)))
       .orderBy(desc(invoices.createdAt))
+      .limit(limit)
+      .offset(offset)
       .then(res => res.map(r => ({...r.invoices, clientName: r.clients?.name, clientRfc: r.clients?.rfc, clientEmail: r.clients?.email })));
 
-    return { success: true, data };
+    return {
+      success: true,
+      data,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1
+      }
+    };
   } catch (error) {
     console.error("Database Error (getInvoices):", error);
     const errorMessage = error instanceof Error ? error.message : "Ocurrió un error desconocido.";
@@ -134,7 +168,7 @@ export const getDeletedInvoices = async (userId: string) => {
     }
     // For now, this will return no documents as there is no "deleted" state.
     // This matches the requested UI.
-    const data: any[] = [];
+    const data: Array<Record<string, never>> = [];
     return { success: true, data };
   } catch (error) {
     console.error("Database Error (getDeletedInvoices):", error);
@@ -150,6 +184,12 @@ export const saveInvoice = async (formData: InvoiceFormValues, userId: string) =
       return { success: false, message: "Demasiadas solicitudes. Por favor, inténtalo de nuevo más tarde." };
   }
   
+  // Verificar permisos
+  const permissionCheck = await checkUserPermission(userId, 'canCreateInvoices');
+  if (!permissionCheck.allowed) {
+    return { success: false, message: permissionCheck.message || "No tienes permisos para crear facturas." };
+  }
+  
   if (!db) {
     return { success: false, message: "Error de configuración: La conexión con la base de datos no está disponible." };
   }
@@ -160,13 +200,62 @@ export const saveInvoice = async (formData: InvoiceFormValues, userId: string) =
     
     const validatedData = invoiceSchema.parse(formData);
 
-    const subtotal = validatedData.concepts.reduce((acc, c) => acc + (c.quantity * c.unitPrice), 0);
-    const totalDiscounts = validatedData.concepts.reduce((acc, c) => acc + (c.discount || 0), 0);
-    const baseImponible = subtotal - totalDiscounts;
-    const iva = baseImponible * 0.16;
-    const totalRetenidos = 0;
-    const total = baseImponible + iva - totalRetenidos;
+    // Calcular totales por concepto
+    let subtotal = 0;
+    let totalDiscounts = 0;
+    let totalIva = 0;
+    let totalRetencionesIsr = 0;
+    let totalRetencionesIva = 0;
 
+    const conceptsWithTax = validatedData.concepts.map(concept => {
+      const amount = (concept.quantity * concept.unitPrice) - (concept.discount || 0);
+      subtotal += concept.quantity * concept.unitPrice;
+      totalDiscounts += concept.discount || 0;
+
+      // Determinar tasa de IVA según objeto de impuesto
+      // 01 = No objeto de impuesto
+      // 02 = Sí objeto de impuesto (gravado)
+      // 03 = Sí objeto de impuesto y no obligado al desglose
+      // 04 = Sí objeto del impuesto y no causa impuesto
+      let ivaTasa = 0;
+      let ivaAmount = 0;
+      let retencionIsr = 0;
+      let retencionIva = 0;
+
+      const objetoImp = concept.objetoImpuesto || '02'; // Default: gravado
+
+      if (objetoImp === '02') {
+        // Tasa estándar 16%, pero puede variar por región (8% frontera)
+        ivaTasa = concept.ivaTasa !== undefined ? concept.ivaTasa : 0.16;
+        ivaAmount = amount * ivaTasa;
+        totalIva += ivaAmount;
+
+        // Retenciones (si aplican, ej: servicios profesionales)
+        if (concept.retencionIsr) {
+          retencionIsr = amount * (concept.retencionIsrTasa || 0.10);
+          totalRetencionesIsr += retencionIsr;
+        }
+        if (concept.retencionIva) {
+          retencionIva = amount * (concept.retencionIvaTasa || 0.106667);
+          totalRetencionesIva += retencionIva;
+        }
+      }
+
+      return {
+        ...concept,
+        amount,
+        ivaAmount,
+        ivaTasa,
+        retencionIsr,
+        retencionIva,
+        objetoImpuesto: objetoImp
+      };
+    });
+
+    const totalRetenciones = totalRetencionesIsr + totalRetencionesIva;
+    const total = subtotal - totalDiscounts + totalIva - totalRetenciones;
+
+    // Insertar factura
     const [newInvoice] = await db.insert(invoices).values({
       userId,
       clientId: validatedData.clientId,
@@ -178,8 +267,8 @@ export const saveInvoice = async (formData: InvoiceFormValues, userId: string) =
       condicionesPago: validatedData.condicionesPago ?? null,
       subtotal: subtotal.toString(),
       discounts: totalDiscounts.toString(),
-      iva: iva.toString(),
-      retenciones: totalRetenidos.toString(),
+      iva: totalIva.toString(),
+      retenciones: totalRetenciones.toString(),
       total: total.toString(),
       status: 'draft',
     }).returning({ id: invoices.id, serie: invoices.serie, folio: invoices.folio, clientId: invoices.clientId });
@@ -187,7 +276,8 @@ export const saveInvoice = async (formData: InvoiceFormValues, userId: string) =
     if (!newInvoice) {
         throw new Error("No se pudo crear la factura.");
     }
-    
+
+    // Preparar conceptos para insertar
     const conceptsToInsert = validatedData.concepts.map(concept => ({
       invoiceId: newInvoice.id,
       userId,
@@ -200,7 +290,14 @@ export const saveInvoice = async (formData: InvoiceFormValues, userId: string) =
       amount: ((concept.quantity * concept.unitPrice) - (concept.discount || 0)).toString(),
     }));
 
-    await db.insert(invoiceItems).values(conceptsToInsert);
+    // Insertar conceptos - si falla, eliminar la factura (rollback manual)
+    try {
+      await db.insert(invoiceItems).values(conceptsToInsert);
+    } catch (itemsError) {
+      // Rollback: eliminar la factura creada
+      await db.delete(invoices).where(eq(invoices.id, newInvoice.id));
+      throw new Error("Error al guardar los conceptos de la factura. La operación fue revertida.");
+    }
 
     revalidatePath("/dashboard/invoices");
     
@@ -223,6 +320,12 @@ export const stampInvoice = async (invoiceId: number, userId: string) => {
         return { success: false, message: "Demasiadas solicitudes. Por favor, inténtalo de nuevo más tarde." };
     }
 
+    // Verificar permisos
+    const permissionCheck = await checkUserPermission(userId, 'canEditInvoices');
+    if (!permissionCheck.allowed) {
+        return { success: false, message: permissionCheck.message || "No tienes permisos para timbrar facturas." };
+    }
+
     if (!db) {
         return { success: false, message: "Error de configuración: La conexión con la base de datos no está disponible." };
     }
@@ -240,8 +343,8 @@ export const stampInvoice = async (invoiceId: number, userId: string) => {
         if (invoiceData.invoice.status !== 'draft') {
             return { success: false, message: "La factura ya ha sido timbrada o está cancelada." };
         }
-        
-        const unsignedXmlString = await _generateXmlString(invoiceData);
+
+        const unsignedXmlString = await _generateXmlString(invoiceData, userId);
 
         const pacResult = await stampWithFacturaLoPlus(unsignedXmlString);
 
@@ -265,25 +368,23 @@ export const stampInvoice = async (invoiceId: number, userId: string) => {
 
         const pdfBytes = await _generatePdfBuffer(invoiceData);
 
-        if (adminStorage) {
-            const bucket = adminStorage.bucket();
-            const basePath = `invoices/${userId}/${invoiceData.invoice.clientId}`;
-            const pdfFileName = `${invoiceData.invoice.serie}-${invoiceData.invoice.folio}.pdf`;
-            const xmlFileName = `${invoiceData.invoice.serie}-${invoiceData.invoice.folio}.xml`;
-            
-            const pdfFile = bucket.file(`${basePath}/${pdfFileName}`);
-            await pdfFile.save(Buffer.from(pdfBytes), { metadata: { contentType: 'application/pdf' } });
-            await pdfFile.makePublic();
-            const pdfUrl = pdfFile.publicUrl();
+        // Subir archivos con URLs firmadas (más seguro que makePublic)
+        const { pdfUrl, xmlUrl, pdfPath, xmlPath } = await uploadInvoiceFiles(
+            userId,
+            invoiceData.invoice.clientId,
+            invoiceData.invoice.serie,
+            invoiceData.invoice.folio,
+            Buffer.from(pdfBytes),
+            stampedXml
+        );
 
-            const xmlFile = bucket.file(`${basePath}/${xmlFileName}`);
-            await xmlFile.save(stampedXml, { metadata: { contentType: 'application/xml' } });
-            await xmlFile.makePublic();
-            const xmlUrl = xmlFile.publicUrl();
-
-            await db.update(invoices).set({ pdfUrl, xmlUrl }).where(and(eq(invoices.id, invoiceId), eq(invoices.userId, userId)));
+        if (pdfUrl || xmlUrl) {
+            await db.update(invoices).set({
+                pdfUrl: pdfPath, // Guardamos el path para regenerar URLs firmadas
+                xmlUrl: xmlPath
+            }).where(and(eq(invoices.id, invoiceId), eq(invoices.userId, userId)));
         } else {
-             console.warn("Firebase Admin Storage not available. Skipping file upload.");
+            console.warn("No se pudieron subir los archivos a Firebase Storage.");
         }
 
 
@@ -314,16 +415,83 @@ async function getInvoiceForDownload(invoiceId: number, userId: string) {
     return { invoice, client, items, company };
 }
 
-async function _generateXmlString(data: NonNullable<Awaited<ReturnType<typeof getInvoiceForDownload>>>) {
+async function _generateXmlString(data: NonNullable<Awaited<ReturnType<typeof getInvoiceForDownload>>>, userId: string) {
     const { invoice, client, items, company } = data;
     const date = new Date(invoice.createdAt!).toISOString().slice(0, -5);
 
-    // This is a placeholder. In a real scenario, this would be a cryptographic signature.
-    const fakeSello = 'aVd...[SELLO_DE_PRUEBA]...='; 
-    // This is the CSD public certificate as a Base64 string.
-    const fakeCertificado = 'MIIF...[CERTIFICADO_DE_PRUEBA]...';
-    // This should come from the user's CSD, provided in the email for testing.
-    const noCertificado = company.templateCfdi33 || '30001000000500003416'; // Using templateCfdi33 as a placeholder for noCertificado for now
+    // Preparar datos para la firma digital
+    const xmlData = {
+        version: '4.0',
+        serie: invoice.serie,
+        folio: invoice.folio.toString(),
+        fecha: date,
+        formaPago: invoice.formaPago,
+        noCertificado: '', // Se llenará con el CSD
+        subTotal: parseFloat(invoice.subtotal).toFixed(2),
+        moneda: 'MXN',
+        total: parseFloat(invoice.total).toFixed(2),
+        tipoDeComprobante: 'I',
+        exportacion: '01',
+        metodoPago: invoice.metodoPago,
+        lugarExpedicion: company.zip || '00000',
+        emisor: {
+            rfc: company.rfc,
+            nombre: company.companyName,
+            regimenFiscal: company.taxRegime,
+        },
+        receptor: {
+            rfc: client.rfc,
+            nombre: client.name,
+            domicilioFiscal: client.zip,
+            regimenFiscal: client.taxRegime,
+            usoCFDI: invoice.usoCfdi,
+        },
+        conceptos: items.map(item => ({
+            claveProdServ: item.satKey,
+            cantidad: item.quantity,
+            claveUnidad: item.unitKey,
+            descripcion: item.description,
+            valorUnitario: parseFloat(item.unitPrice).toFixed(2),
+            importe: parseFloat(item.amount).toFixed(2),
+            objetoImp: '02',
+            impuestos: {
+                base: parseFloat(item.amount).toFixed(2),
+                impuesto: '002',
+                tipoFactor: 'Tasa',
+                tasaOCuota: '0.160000',
+                importe: (parseFloat(item.amount) * 0.16).toFixed(2),
+            }
+        })),
+        impuestos: {
+            totalImpuestosTrasladados: parseFloat(invoice.iva).toFixed(2),
+            traslados: [{
+                base: parseFloat(invoice.subtotal).toFixed(2),
+                impuesto: '002',
+                tipoFactor: 'Tasa',
+                tasaOCuota: '0.160000',
+                importe: parseFloat(invoice.iva).toFixed(2),
+            }]
+        }
+    };
+
+    // Firmar el CFDI con el CSD del usuario
+    const signResult = await signCFDI(userId, xmlData);
+
+    let sello: string;
+    let certificado: string;
+    let noCertificado: string;
+
+    if (signResult.success) {
+        sello = signResult.sello;
+        certificado = signResult.certificado;
+        noCertificado = signResult.noCertificado;
+    } else {
+        // Fallback para pruebas si no hay CSD configurado
+        console.warn('CSD signing failed:', 'message' in signResult ? signResult.message : 'Unknown error');
+        sello = 'SELLO_PENDIENTE_CONFIGURAR_CSD';
+        certificado = 'CERTIFICADO_PENDIENTE_CONFIGURAR_CSD';
+        noCertificado = '00000000000000000000';
+    }
     
     const concepts = items.map(item => ({
         'cfdi:Concepto': {
@@ -349,7 +517,12 @@ async function _generateXmlString(data: NonNullable<Awaited<ReturnType<typeof ge
         }
     }));
 
-    const xmlObject: any = {
+    // Tipo para la estructura XML del CFDI 4.0 compatible con xmlbuilder2
+    type CfdiXmlObject = {
+        'cfdi:Comprobante': Record<string, unknown>;
+    };
+
+    const xmlObject: CfdiXmlObject = {
         'cfdi:Comprobante': {
             '@xmlns:cfdi': 'http://www.sat.gob.mx/cfd/4',
             '@xmlns:xsi': 'http://www.w3.org/2001/XMLSchema-instance',
@@ -358,10 +531,10 @@ async function _generateXmlString(data: NonNullable<Awaited<ReturnType<typeof ge
             '@Serie': invoice.serie,
             '@Folio': invoice.folio,
             '@Fecha': date,
-            '@Sello': fakeSello,
+            '@Sello': sello,
             '@FormaPago': invoice.formaPago,
             '@NoCertificado': noCertificado,
-            '@Certificado': fakeCertificado,
+            '@Certificado': certificado,
             '@SubTotal': parseFloat(invoice.subtotal).toFixed(2),
             '@Moneda': 'MXN',
             '@Total': parseFloat(invoice.total).toFixed(2),
@@ -625,7 +798,7 @@ export const generateInvoiceXml = async (invoiceId: number, userId: string) => {
         if (!data) {
             return { success: false, message: "No se encontró la factura." };
         }
-        const xml = await _generateXmlString(data);
+        const xml = await _generateXmlString(data, userId);
         return { success: true, xml };
     } catch (error) {
         console.error("Error generating XML:", error);
@@ -646,5 +819,133 @@ export const generateInvoicePdf = async (invoiceId: number, userId: string) => {
         console.error("Error generating PDF:", error);
         const message = error instanceof Error ? error.message : "Error desconocido al generar el PDF.";
         return { success: false, message: `Error al generar PDF: ${message}` };
+    }
+};
+
+export const cancelInvoice = async (
+    invoiceId: number,
+    userId: string,
+    cancellationReason: string = '02' // 02 = Comprobantes emitidos con errores con relación
+) => {
+    const ratelimit = getRateLimiter();
+    const { success: rateLimitSuccess } = await ratelimit.limit(userId);
+    if (!rateLimitSuccess) {
+        return { success: false, message: "Demasiadas solicitudes. Por favor, inténtalo de nuevo más tarde." };
+    }
+
+    // Verificar permisos
+    const permissionCheck = await checkUserPermission(userId, 'canCancelInvoices');
+    if (!permissionCheck.allowed) {
+        return { success: false, message: permissionCheck.message || "No tienes permisos para cancelar facturas." };
+    }
+
+    if (!db) {
+        return { success: false, message: "Error de configuración: La conexión con la base de datos no está disponible." };
+    }
+
+    try {
+        if (!userId) {
+            return { success: false, message: "Usuario no autenticado." };
+        }
+
+        // Obtener la factura
+        const [invoice] = await db
+            .select()
+            .from(invoices)
+            .where(and(eq(invoices.id, invoiceId), eq(invoices.userId, userId)));
+
+        if (!invoice) {
+            return { success: false, message: "Factura no encontrada." };
+        }
+
+        if (invoice.status === 'canceled') {
+            return { success: false, message: "La factura ya está cancelada." };
+        }
+
+        if (invoice.status === 'draft') {
+            return { success: false, message: "No se puede cancelar una factura en borrador. Elimínela directamente." };
+        }
+
+        if (!invoice.uuid) {
+            return { success: false, message: "La factura no tiene UUID. Solo se pueden cancelar facturas timbradas." };
+        }
+
+        // TODO: Implementar llamada al PAC para cancelación ante el SAT
+        // La cancelación ante el SAT requiere:
+        // 1. UUID de la factura
+        // 2. Motivo de cancelación (01, 02, 03, 04)
+        // 3. UUID de sustitución si el motivo es 01
+        // 4. Certificado CSD para firmar la solicitud
+
+        // Por ahora, solo actualizamos el estado local
+        // En producción, esto debe conectarse al servicio de cancelación del PAC
+
+        await db.update(invoices).set({
+            status: 'canceled',
+            updatedAt: new Date()
+        }).where(and(eq(invoices.id, invoiceId), eq(invoices.userId, userId)));
+
+        revalidatePath("/dashboard/invoices");
+        revalidatePath("/dashboard/invoices/canceled");
+
+        return {
+            success: true,
+            message: "Factura marcada como cancelada. Nota: La cancelación ante el SAT debe realizarse manualmente.",
+            data: {
+                invoiceId,
+                uuid: invoice.uuid,
+                cancellationReason
+            }
+        };
+    } catch (error) {
+        console.error("Database Error (cancelInvoice):", error);
+        const errorMessage = error instanceof Error ? error.message : "Ocurrió un error desconocido al cancelar la factura.";
+        return { success: false, message: errorMessage };
+    }
+};
+
+export const deleteInvoice = async (invoiceId: number, userId: string) => {
+    const ratelimit = getRateLimiter();
+    const { success: rateLimitSuccess } = await ratelimit.limit(userId);
+    if (!rateLimitSuccess) {
+        return { success: false, message: "Demasiadas solicitudes. Por favor, inténtalo de nuevo más tarde." };
+    }
+
+    // Verificar permisos
+    const permissionCheck = await checkUserPermission(userId, 'canEditInvoices');
+    if (!permissionCheck.allowed) {
+        return { success: false, message: permissionCheck.message || "No tienes permisos para eliminar facturas." };
+    }
+
+    if (!db) {
+        return { success: false, message: "Error de configuración: La conexión con la base de datos no está disponible." };
+    }
+
+    try {
+        // Obtener la factura primero
+        const [invoice] = await db
+            .select()
+            .from(invoices)
+            .where(and(eq(invoices.id, invoiceId), eq(invoices.userId, userId)));
+
+        if (!invoice) {
+            return { success: false, message: "Factura no encontrada." };
+        }
+
+        // Solo se pueden eliminar borradores
+        if (invoice.status !== 'draft') {
+            return { success: false, message: "Solo se pueden eliminar facturas en borrador. Las facturas timbradas deben cancelarse." };
+        }
+
+        // Eliminar la factura (los items se eliminan en cascada)
+        await db.delete(invoices).where(and(eq(invoices.id, invoiceId), eq(invoices.userId, userId)));
+
+        revalidatePath("/dashboard/invoices");
+
+        return { success: true, message: "Factura eliminada exitosamente." };
+    } catch (error) {
+        console.error("Database Error (deleteInvoice):", error);
+        const errorMessage = error instanceof Error ? error.message : "Ocurrió un error desconocido al eliminar la factura.";
+        return { success: false, message: errorMessage };
     }
 };
