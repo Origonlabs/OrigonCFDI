@@ -1,4 +1,4 @@
-'use server';
+
 
 import forge from 'node-forge';
 import db from '@/lib/db';

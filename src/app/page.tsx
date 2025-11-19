@@ -49,6 +49,10 @@ export default function LoginPage() {
               Política de Privacidad
             </a>.
           </p>
+          <div className="mt-8 text-muted-foreground/60">
+            <p>Developed by <span className="font-semibold text-foreground">Opendex Cloud Platform</span></p>
+            <p className="text-[10px] mt-1">© {new Date().getFullYear()} Opendex Corporation. All rights reserved.</p>
+          </div>
         </div>
       </motion.div>
     </div>

@@ -69,7 +69,7 @@ export default function DashboardLayout({
   const [openCategory, setOpenCategory] = React.useState<string | undefined>();
   const [isAboutDialogOpen, setIsAboutDialogOpen] = React.useState(false);
   const isSettingsActive = pathname.startsWith('/dashboard/settings');
-  
+
   // Filtrar navegación según el rol del usuario
   const filteredNavigation = React.useMemo(() => {
     return filterNavigationByRole(role);
@@ -99,16 +99,16 @@ export default function DashboardLayout({
 
   const getInitials = (name: string | null | undefined, email: string | null | undefined): string => {
     if (name) {
-        const nameParts = name.trim().split(' ').filter(Boolean);
-        if (nameParts.length > 1 && nameParts[1]) {
-            return `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase();
-        }
-        if (nameParts.length === 1 && nameParts[0]) {
-            return nameParts[0].substring(0, 2).toUpperCase();
-        }
+      const nameParts = name.trim().split(' ').filter(Boolean);
+      if (nameParts.length > 1 && nameParts[1]) {
+        return `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase();
+      }
+      if (nameParts.length === 1 && nameParts[0]) {
+        return nameParts[0].substring(0, 2).toUpperCase();
+      }
     }
     if (email) {
-        return email.substring(0, 2).toUpperCase();
+      return email.substring(0, 2).toUpperCase();
     }
     return 'U';
   };
@@ -152,7 +152,7 @@ export default function DashboardLayout({
                   className={cn(
                     'w-full justify-start gap-2 px-2',
                     pathname === subItem.href &&
-                      'bg-accent text-accent-foreground'
+                    'bg-accent text-accent-foreground'
                   )}
                 >
                   <Link href={subItem.href}>
@@ -166,7 +166,7 @@ export default function DashboardLayout({
       </Collapsible>
     );
   };
-  
+
   if (loading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-[#1A1A1A]">
@@ -214,7 +214,7 @@ export default function DashboardLayout({
 
         {/* Right side */}
         <div className="flex items-center gap-1">
-           <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-neutral-300 hover:bg-neutral-800 hover:text-white">
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-neutral-300 hover:bg-neutral-800 hover:text-white">
             <AlertRegular className="h-5 w-5" />
           </Button>
           <ThemeToggle />
@@ -271,7 +271,7 @@ export default function DashboardLayout({
                 if (item.sublinks) {
                   return renderLinkGroup(item);
                 }
-                
+
                 const isActive = pathname === item.href;
                 const Icon = item.icon;
 
@@ -306,7 +306,7 @@ export default function DashboardLayout({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-64 mb-1" side="top" align="start">
-                 <DropdownMenuItem asChild>
+                <DropdownMenuItem asChild>
                   <Link href="#" className="cursor-pointer">
                     <BotRegular className="mr-2 h-4 w-4" />
                     <span>Asistente de Configuración</span>
@@ -342,43 +342,48 @@ export default function DashboardLayout({
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
+            <div className="mt-4 px-2 text-xs text-muted-foreground/50 text-center">
+              <p>Powered by</p>
+              <p className="font-medium text-muted-foreground/70">Opendex Cloud</p>
+            </div>
           </div>
         </aside>
         <main className="flex-1 overflow-y-auto bg-background rounded-tr-[15px]">
           <div className="p-4 lg:p-6">
             {children}
             <Dialog open={isAboutDialogOpen} onOpenChange={setIsAboutDialogOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Acerca de Origon CFDI</DialogTitle>
-                        <DialogDescription>
-                            Plataforma de facturación electrónica y timbrado CFDI 4.0.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4 text-sm">
-                        <div className="flex justify-between">
-                            <span className="text-muted-foreground">Versión de la Aplicación:</span>
-                            <span className="font-medium">{packageJson.version}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-muted-foreground">Desarrollador:</span>
-                            <span className="font-medium">Opendex Cloud Platform</span>
-                        </div>
-                        <div className="space-y-1">
-                             <span className="text-muted-foreground">Licencias:</span>
-                             <p className="text-xs text-muted-foreground">
-                                Este software utiliza componentes de código abierto. El software es propiedad de Opendex Corporation y no puede ser distribuido sin consentimiento.
-                             </p>
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button onClick={() => setIsAboutDialogOpen(false)}>Cerrar</Button>
-                    </DialogFooter>
-                </DialogContent>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Acerca de Origon CFDI</DialogTitle>
+                  <DialogDescription>
+                    Plataforma de facturación electrónica y timbrado CFDI 4.0.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Versión de la Aplicación:</span>
+                    <span className="font-medium">{packageJson.version}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Desarrollador:</span>
+                    <span className="font-medium">Opendex Cloud Platform</span>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-muted-foreground">Licencias:</span>
+                    <p className="text-xs text-muted-foreground">
+                      Este software utiliza componentes de código abierto. El software es propiedad de Opendex Corporation y no puede ser distribuido sin consentimiento.
+                    </p>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button onClick={() => setIsAboutDialogOpen(false)}>Cerrar</Button>
+                </DialogFooter>
+              </DialogContent>
             </Dialog>
           </div>
         </main>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 }
