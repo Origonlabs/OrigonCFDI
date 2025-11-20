@@ -17,6 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { getBankAccounts } from "@/app/actions/bank-accounts";
 import { getCompanyProfile } from "@/app/actions/companies";
 import type { BankAccountFormValues } from "@/lib/schemas";
+import { getUserAuth } from "@/lib/auth-client";
 
 interface BankAccount extends BankAccountFormValues {
   id: number;
@@ -50,27 +51,36 @@ export default function BankAccountsPage() {
   const fetchData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const [accountsResponse, profileResponse] = await Promise.all([
-        getBankAccounts(user.uid),
-        getCompanyProfile(user.uid)
-    ]);
+    try {
+      const { uid, token } = await getUserAuth(user);
+      const [accountsResponse, profileResponse] = await Promise.all([
+          getBankAccounts(uid, token),
+          getCompanyProfile(uid, token)
+      ]);
 
-    if (accountsResponse.success && accountsResponse.data) {
-      const processedAccounts = accountsResponse.data.map(account => ({
-        ...account,
-        createdAt: account.createdAt instanceof Date ? account.createdAt.toISOString() : account.createdAt
-      }));
-      setAccounts(processedAccounts as BankAccount[]);
-    } else {
+      if (accountsResponse.success && accountsResponse.data) {
+        const processedAccounts = accountsResponse.data.map(account => ({
+          ...account,
+          createdAt: account.createdAt instanceof Date ? account.createdAt.toISOString() : account.createdAt
+        }));
+        setAccounts(processedAccounts as BankAccount[]);
+      } else {
+        toast({
+          title: "Error",
+          description: accountsResponse.message || "No se pudieron cargar las cuentas.",
+          variant: "destructive",
+        });
+      }
+
+      if (profileResponse.success && profileResponse.data) {
+          setRfc(profileResponse.data.rfc);
+      }
+    } catch (error) {
       toast({
         title: "Error",
-        description: accountsResponse.message || "No se pudieron cargar las cuentas.",
+        description: error instanceof Error ? error.message : "No fue posible autenticar la sesión.",
         variant: "destructive",
       });
-    }
-
-    if (profileResponse.success && profileResponse.data) {
-        setRfc(profileResponse.data.rfc);
     }
 
     setLoading(false);

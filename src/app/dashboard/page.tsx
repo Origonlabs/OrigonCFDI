@@ -59,12 +59,16 @@ export default function DashboardPage() {
     return () => unsubscribe();
   }, []);
 
-  const fetchDashboardData = useCallback(async (uid: string) => {
+  const fetchDashboardData = useCallback(async () => {
+    if (!user) return;
     setLoading(true);
-    const [statsResponse, setupResponse] = await Promise.all([
-      getDashboardStats(uid),
-      getSetupStatus(uid)
-    ]);
+    try {
+      const { getUserAuth } = await import('@/lib/auth-client');
+      const { uid, token } = await getUserAuth(user);
+      const [statsResponse, setupResponse] = await Promise.all([
+        getDashboardStats(uid, token),
+        getSetupStatus(uid, token)
+      ]);
 
     if (statsResponse.success && statsResponse.data) {
       const processedStats = {
@@ -96,13 +100,19 @@ export default function DashboardPage() {
         variant: "destructive",
       });
     }
-    
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "No fue posible autenticar la sesión.",
+        variant: "destructive",
+      });
+    }
     setLoading(false);
-  }, [toast]);
+  }, [user, toast]);
   
   useEffect(() => {
     if (user) {
-      fetchDashboardData(user.uid);
+      fetchDashboardData();
     }
   }, [user, fetchDashboardData]);
   

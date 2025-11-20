@@ -55,13 +55,23 @@ export default function NewProductPage() {
             toast({ title: "Error", description: "Debes iniciar sesión para agregar un producto.", variant: "destructive" });
             return;
         }
-        const result = await addProduct(data, user.uid);
+        try {
+            const { getUserAuth } = await import('@/lib/auth-client');
+            const { uid, token } = await getUserAuth(user);
+            const result = await addProduct(data, uid, token);
 
         if (result.success) {
             toast({ title: "Éxito", description: "El producto se ha guardado correctamente." });
             router.push("/dashboard/products");
         } else {
             toast({ title: "Error al guardar", description: result.message || "No se pudo guardar la información del producto.", variant: "destructive" });
+        }
+        } catch (error) {
+            toast({ 
+                title: "Error", 
+                description: error instanceof Error ? error.message : "No fue posible autenticar la sesión.", 
+                variant: "destructive" 
+            });
         }
     }
 

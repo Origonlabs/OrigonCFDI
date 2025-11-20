@@ -8,6 +8,7 @@ import { User } from "firebase/auth"
 import { auth, firebaseEnabled } from "@/lib/firebase/client"
 import { useToast } from "@/hooks/use-toast"
 import { getDeletedPayments } from "@/app/actions/payments"
+import { getUserAuth } from "@/lib/auth-client";
 
 import { Button } from "@/components/ui/button"
 import {
@@ -61,25 +62,35 @@ export default function DeletedPaymentsPage() {
     return () => unsubscribe();
   }, []);
 
-  const fetchDeletedPayments = useCallback(async (uid: string) => {
+  const fetchDeletedPayments = useCallback(async () => {
+    if (!user) return;
     setLoading(true);
-    const response = await getDeletedPayments(uid);
+    try {
+      const { uid, token } = await getUserAuth(user);
+      const response = await getDeletedPayments(uid, token);
 
-    if (response.success && response.data) {
-      setPayments(response.data as DeletedPayment[]);
-    } else {
+      if (response.success && response.data) {
+        setPayments(response.data as DeletedPayment[]);
+      } else {
+        toast({
+          title: "Error",
+          description: response.message || "No se pudieron cargar los pagos eliminados.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
       toast({
         title: "Error",
-        description: response.message || "No se pudieron cargar los pagos eliminados.",
+        description: error instanceof Error ? error.message : "No fue posible autenticar la sesión.",
         variant: "destructive",
       });
     }
     setLoading(false);
-  }, [toast]);
+  }, [user, toast]);
 
   useEffect(() => {
     if (user) {
-      fetchDeletedPayments(user.uid);
+      fetchDeletedPayments();
     }
   }, [user, fetchDeletedPayments]);
   

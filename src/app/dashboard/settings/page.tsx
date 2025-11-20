@@ -78,10 +78,14 @@ export default function SettingsPage() {
   });
 
   const fetchProfile = useCallback(async (uid: string) => {
-      const [profileResponse, certificateResponse] = await Promise.all([
-          getCompanyProfile(uid),
-          getCertificateDetails(uid)
-      ]);
+      if (!user) return;
+      try {
+        const { getUserAuth } = await import('@/lib/auth-client');
+        const { uid: verifiedUid, token } = await getUserAuth(user);
+        const [profileResponse, certificateResponse] = await Promise.all([
+            getCompanyProfile(verifiedUid, token),
+            getCertificateDetails(verifiedUid, token)
+        ]);
 
       if (profileResponse.success && profileResponse.data) {
         profileForm.reset(profileResponse.data as any);
@@ -101,8 +105,11 @@ export default function SettingsPage() {
           };
           setCertificate(processedCertificate as Certificate);
       }
+      } catch (error) {
+        console.error("Error fetching profile:", error);
+      }
       setLoading(false);
-  }, [profileForm]);
+  }, [profileForm, user]);
 
   useEffect(() => {
     if (!firebaseEnabled || !auth) {
@@ -133,18 +140,28 @@ export default function SettingsPage() {
       return;
     }
 
-    // Update company profile
-    const result = await saveCompanyProfile(data, user.uid);
+    try {
+      const { getUserAuth } = await import('@/lib/auth-client');
+      const { uid, token } = await getUserAuth(user);
+      // Update company profile
+      const result = await saveCompanyProfile(data, uid, token);
     
-    // Update user display name
-    if (user && (user.displayName !== `${firstName} ${lastName}`.trim())) {
-        await updateProfile(user, { displayName: `${firstName} ${lastName}`.trim() });
-    }
-    
-    if (result.success) {
-      toast({ title: "Éxito", description: "La configuración se ha actualizado." });
-    } else {
-      toast({ title: "Error al guardar", description: result.message || "No se pudo guardar la información.", variant: "destructive" });
+      // Update user display name
+      if (user && (user.displayName !== `${firstName} ${lastName}`.trim())) {
+          await updateProfile(user, { displayName: `${firstName} ${lastName}`.trim() });
+      }
+      
+      if (result.success) {
+        toast({ title: "Éxito", description: "La configuración se ha actualizado." });
+      } else {
+        toast({ title: "Error al guardar", description: result.message || "No se pudo guardar la información.", variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ 
+        title: "Error", 
+        description: error instanceof Error ? error.message : "No fue posible autenticar la sesión.", 
+        variant: "destructive" 
+      });
     }
   }
 

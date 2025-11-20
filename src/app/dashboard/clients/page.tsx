@@ -67,19 +67,29 @@ export default function ClientsPage() {
   const fetchClients = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const response = await getClients(user.uid);
+    try {
+      const token = await user.getIdToken();
+      const response = await getClients(user.uid, token);
 
-    if (response.success && response.data) {
-      const clientsData = response.data.map((client: any) => ({
-        ...client,
-        id: client.id,
-        createdAt: new Date(client.created_at).toLocaleDateString(),
-      })) as Client[];
-      setClients(clientsData);
-    } else {
+      if (response.success && response.data) {
+        const clientsData = response.data.map((client: any) => ({
+          ...client,
+          id: client.id,
+          createdAt: new Date(client.created_at).toLocaleDateString(),
+        })) as Client[];
+        setClients(clientsData);
+      } else {
+        toast({
+          title: "Error",
+          description: response.message || "No se pudieron cargar los clientes.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error(error);
       toast({
         title: "Error",
-        description: response.message || "No se pudieron cargar los clientes.",
+        description: "No fue posible autenticar la sesión actual.",
         variant: "destructive",
       });
     }
@@ -100,15 +110,21 @@ export default function ClientsPage() {
   const handleUpdateClient = async (data: ClientFormValues) => {
     if (!user || !editingClient) return;
 
-    const result = await updateClient(editingClient.id, data, user.uid);
+    try {
+      const token = await user.getIdToken();
+      const result = await updateClient(editingClient.id, data, user.uid, token);
 
-    if (result.success) {
-      toast({ title: "Éxito", description: "El cliente se ha actualizado." });
-      setIsDialogOpen(false);
-      setEditingClient(null);
-      await fetchClients(); // Refetch clients to show updated data
-    } else {
-      toast({ title: "Error al actualizar", description: result.message, variant: "destructive" });
+      if (result.success) {
+        toast({ title: "Éxito", description: "El cliente se ha actualizado." });
+        setIsDialogOpen(false);
+        setEditingClient(null);
+        await fetchClients(); // Refetch clients to show updated data
+      } else {
+        toast({ title: "Error al actualizar", description: result.message, variant: "destructive" });
+      }
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Error al actualizar", description: "No fue posible validar tu sesión.", variant: "destructive" });
     }
   };
 

@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast"
 import { getClients } from "@/app/actions/clients"
 import { getProducts } from "@/app/actions/products"
 import { saveInvoice } from "@/app/actions/invoices";
+import { getUserAuth } from "@/lib/auth-client";
 import { invoiceSchema, type InvoiceFormValues, type ClientFormValues, type ProductFormValues, type Concepto } from "@/lib/schemas"
 import { usoCfdiOptions } from "@/lib/catalogs"
 
@@ -275,9 +276,13 @@ export default function NewInvoicePage() {
   const fetchData = useCallback(async (uid: string) => {
     setLoading(true);
     try {
+      const token = await auth?.currentUser?.getIdToken();
+      if (!token) {
+        throw new Error("No se pudo obtener el token de sesión.");
+      }
       const [clientsRes, productsRes] = await Promise.all([
-        getClients(uid),
-        getProducts(uid),
+        getClients(uid, token),
+        getProducts(uid, token),
       ]);
 
       if (clientsRes.success && clientsRes.data) {
@@ -293,7 +298,7 @@ export default function NewInvoicePage() {
         toast({ title: "Error", description: productsRes.message || "No se pudieron cargar los productos.", variant: "destructive" });
       }
     } catch (error) {
-      toast({ title: "Error", description: "Ocurrió un error al cargar los datos.", variant: "destructive" });
+      toast({ title: "Error", description: error instanceof Error ? error.message : "Ocurrió un error al cargar los datos.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -338,12 +343,17 @@ export default function NewInvoicePage() {
       toast({ title: "Error", description: "Debes iniciar sesión para guardar una factura.", variant: "destructive" });
       return;
     }
-    const result = await saveInvoice(data, user.uid);
-    if (result.success && result.data) {
-      toast({ title: "Éxito", description: "La factura se ha guardado como borrador." });
-      setSavedInvoice(result.data);
-    } else {
-      toast({ title: "Error al guardar", description: result.message || "No se pudo guardar la factura.", variant: "destructive" });
+    try {
+        const { uid, token } = await getUserAuth(user);
+        const result = await saveInvoice(data, uid, token);
+        if (result.success && result.data) {
+            toast({ title: "Éxito", description: "La factura se ha guardado como borrador." });
+            setSavedInvoice(result.data);
+        } else {
+            toast({ title: "Error al guardar", description: result.message || "No se pudo guardar la factura.", variant: "destructive" });
+        }
+    } catch (error) {
+        toast({ title: "Error al guardar", description: error instanceof Error ? error.message : "No fue posible validar tu sesión.", variant: "destructive" });
     }
   }
 

@@ -63,7 +63,10 @@ export default function ProductsPage() {
   const fetchProducts = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const response = await getProducts(user.uid);
+    try {
+      const { getUserAuth } = await import('@/lib/auth-client');
+      const { uid, token } = await getUserAuth(user);
+      const response = await getProducts(uid, token);
 
     if (response.success && response.data) {
       const productsData = response.data.map((product: any) => ({
@@ -76,6 +79,13 @@ export default function ProductsPage() {
       toast({
         title: "Error",
         description: response.message || "No se pudieron cargar los productos.",
+        variant: "destructive",
+      });
+    }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "No fue posible autenticar la sesión.",
         variant: "destructive",
       });
     }

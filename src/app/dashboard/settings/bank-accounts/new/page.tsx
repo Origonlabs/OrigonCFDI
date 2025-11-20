@@ -13,6 +13,7 @@ import { auth, firebaseEnabled } from "@/lib/firebase/client";
 import { useToast } from "@/hooks/use-toast";
 import { addBankAccount } from "@/app/actions/bank-accounts";
 import { bankAccountSchema, type BankAccountFormValues } from "@/lib/schemas";
+import { getUserAuth } from "@/lib/auth-client";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,13 +61,18 @@ export default function NewBankAccountPage() {
             toast({ title: "Error", description: "Debes iniciar sesión para agregar una cuenta.", variant: "destructive" });
             return;
         }
-        const result = await addBankAccount(data, user.uid);
+        try {
+            const { uid, token } = await getUserAuth(user);
+            const result = await addBankAccount(data, uid, token);
 
-        if (result.success) {
-            toast({ title: "Éxito", description: "La cuenta bancaria se ha guardado correctamente." });
-            router.push("/dashboard/settings/bank-accounts");
-        } else {
-            toast({ title: "Error al guardar", description: result.message || "No se pudo guardar la cuenta.", variant: "destructive" });
+            if (result.success) {
+                toast({ title: "Éxito", description: "La cuenta bancaria se ha guardado correctamente." });
+                router.push("/dashboard/settings/bank-accounts");
+            } else {
+                toast({ title: "Error al guardar", description: result.message || "No se pudo guardar la cuenta.", variant: "destructive" });
+            }
+        } catch (error) {
+            toast({ title: "Error al guardar", description: error instanceof Error ? error.message : "No fue posible validar tu sesión.", variant: "destructive" });
         }
     }
     

@@ -247,13 +247,30 @@ export function extractCertificateNumber(certificatePem: string): string {
 /**
  * Verifica si el certificado está vigente
  */
-export function isCertificateValid(certificatePem: string): boolean {
+export function isCertificateValid(certificatePem: string): {
+  valid: boolean;
+  message?: string;
+  validFrom?: Date;
+  validTo?: Date;
+} {
   try {
     const cert = forge.pki.certificateFromPem(certificatePem);
     const now = new Date();
-    return now >= cert.validity.notBefore && now <= cert.validity.notAfter;
-  } catch {
-    return false;
+    const validFrom = cert.validity.notBefore;
+    const validTo = cert.validity.notAfter;
+    const isValid = now >= validFrom && now <= validTo;
+
+    return {
+      valid: isValid,
+      validFrom,
+      validTo,
+      message: isValid ? undefined : 'El certificado ha expirado o aún no es válido'
+    };
+  } catch (error) {
+    return {
+      valid: false,
+      message: 'Error al validar el certificado: formato inválido'
+    };
   }
 }
 

@@ -3,8 +3,9 @@
 import db from '@/lib/db';
 import { csdCertificates } from '../../../drizzle/schema';
 import { eq } from 'drizzle-orm';
+import { verifyUserRequest } from '@/lib/auth-server';
 
-export const getSetupStatus = async (userId: string) => {
+export const getSetupStatus = async (userId: string, idToken: string) => {
     if (!db) {
         return { success: false, message: "La conexión con la base de datos no está disponible.", data: { hasCsd: false } };
     }
@@ -13,9 +14,10 @@ export const getSetupStatus = async (userId: string) => {
             return { success: false, message: "Usuario no autenticado.", data: { hasCsd: false } };
         }
 
+        const verifiedUserId = await verifyUserRequest(userId, idToken);
         const existingCertificate = await db.select({ id: csdCertificates.id })
             .from(csdCertificates)
-            .where(eq(csdCertificates.userId, userId))
+            .where(eq(csdCertificates.userId, verifiedUserId))
             .limit(1);
 
         const hasCsd = existingCertificate.length > 0;
@@ -29,7 +31,7 @@ export const getSetupStatus = async (userId: string) => {
     }
 };
 
-export const getCertificateDetails = async (userId: string) => {
+export const getCertificateDetails = async (userId: string, idToken: string) => {
     if (!db) {
         return { success: false, message: "La conexión con la base de datos no está disponible.", data: null };
     }
@@ -38,9 +40,10 @@ export const getCertificateDetails = async (userId: string) => {
             return { success: false, message: "Usuario no autenticado.", data: null };
         }
 
+        const verifiedUserId = await verifyUserRequest(userId, idToken);
         const [certificate] = await db.select()
             .from(csdCertificates)
-            .where(eq(csdCertificates.userId, userId))
+            .where(eq(csdCertificates.userId, verifiedUserId))
             .limit(1);
         
         return { success: true, data: certificate ?? null };

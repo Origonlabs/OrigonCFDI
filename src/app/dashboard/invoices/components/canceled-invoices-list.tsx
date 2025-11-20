@@ -7,6 +7,7 @@ import { User } from "firebase/auth"
 import { auth, firebaseEnabled } from "@/lib/firebase/client"
 import { useToast } from "@/hooks/use-toast"
 import { getCanceledInvoices } from "@/app/actions/invoices"
+import { getUserAuth } from "@/lib/auth-client";
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -71,25 +72,35 @@ export function CanceledInvoicesList() {
     return () => unsubscribe();
   }, []);
 
-  const fetchCanceledInvoices = useCallback(async (uid: string) => {
+  const fetchCanceledInvoices = useCallback(async () => {
+    if (!user) return;
     setLoading(true);
-    const response = await getCanceledInvoices(uid);
+    try {
+      const { uid, token } = await getUserAuth(user);
+      const response = await getCanceledInvoices(uid, token);
 
-    if (response.success && response.data) {
-      setInvoices(response.data as Invoice[]);
-    } else {
+      if (response.success && response.data) {
+        setInvoices(response.data as Invoice[]);
+      } else {
+        toast({
+          title: "Error",
+          description: response.message || "No se pudieron cargar las facturas canceladas.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
       toast({
         title: "Error",
-        description: response.message || "No se pudieron cargar las facturas canceladas.",
+        description: error instanceof Error ? error.message : "No fue posible autenticar la sesión.",
         variant: "destructive",
       });
     }
     setLoading(false);
-  }, [toast]);
+  }, [user, toast]);
 
   useEffect(() => {
     if (user) {
-      fetchCanceledInvoices(user.uid);
+      fetchCanceledInvoices();
     }
   }, [user, fetchCanceledInvoices]);
 

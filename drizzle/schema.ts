@@ -1,5 +1,5 @@
 
-import { pgTable, serial, text, varchar, timestamp, numeric, integer, pgEnum, boolean, index } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, varchar, timestamp, numeric, integer, pgEnum, boolean } from "drizzle-orm/pg-core";
 
 // --- Roles de Usuario ---
 export const userRoleEnum = pgEnum('user_role', ['admin', 'company', 'accountant', 'client']);
@@ -34,17 +34,14 @@ export const clients = pgTable('clients', {
   street: text('street'),
   exteriorNumber: varchar('exterior_number', { length: 50 }),
   interiorNumber: varchar('interior_number', { length: 50 }),
-
+  
   // Contacto y Preferencias
   phone: varchar('phone', { length: 20 }),
   paymentMethod: varchar('payment_method', { length: 3 }),
   paymentForm: varchar('payment_form', { length: 3 }),
   usoCfdi: varchar('uso_cfdi', { length: 4 }),
   reference: text('reference'),
-}, (table) => ({
-  userIdIdx: index('clients_user_id_idx').on(table.userId),
-  rfcIdx: index('clients_rfc_idx').on(table.rfc),
-}));
+});
 
 export const clientBankAccounts = pgTable('client_bank_accounts', {
   id: serial('id').primaryKey(),
@@ -100,9 +97,11 @@ export const csdCertificates = pgTable('csd_certificates', {
   id: serial('id').primaryKey(),
   userId: varchar('user_id', { length: 256 }).notNull(),
   certificateNumber: varchar('certificate_number', { length: 64 }).notNull().unique(),
+  rfc: varchar('rfc', { length: 13 }).notNull(),
   validFrom: timestamp('valid_from').notNull(),
   validTo: timestamp('valid_to').notNull(),
   status: certificateStatusEnum('status').default('active').notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
   privateKey: text('private_key').notNull(),
   certificate: text('certificate').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -142,19 +141,18 @@ export const invoices = pgTable('invoices', {
   retenciones: numeric('retenciones', { precision: 10, scale: 2 }).default('0').notNull(),
   total: numeric('total', { precision: 10, scale: 2 }).notNull(),
   status: invoiceStatusEnum('status').default('draft').notNull(),
+  tipoComprobante: varchar('tipo_comprobante', { length: 1 }).default('I').notNull(), // I=Ingreso, E=Egreso, T=Traslado, P=Pago
+  relationType: varchar('relation_type', { length: 2 }), // Tipo de relación con otros CFDI
+  relatedCfdis: text('related_cfdis'), // JSON con UUIDs de CFDI relacionados
   pdfUrl: text('pdf_url'),
   xmlUrl: text('xml_url'),
+  pdfPath: text('pdf_path'), // Ruta en Storage para regenerar URL firmada
+  xmlPath: text('xml_path'), // Ruta en Storage para regenerar URL firmada
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   uuid: varchar('uuid', { length: 36 }),
   stampDate: timestamp('stamp_date'),
-}, (table) => ({
-  userIdIdx: index('invoices_user_id_idx').on(table.userId),
-  statusIdx: index('invoices_status_idx').on(table.status),
-  createdAtIdx: index('invoices_created_at_idx').on(table.createdAt),
-  clientIdIdx: index('invoices_client_id_idx').on(table.clientId),
-  uuidIdx: index('invoices_uuid_idx').on(table.uuid),
-}));
+});
 
 export const invoiceItems = pgTable('invoice_items', {
   id: serial('id').primaryKey(),
@@ -167,6 +165,11 @@ export const invoiceItems = pgTable('invoice_items', {
   quantity: integer('quantity').notNull(),
   discount: numeric('discount', { precision: 10, scale: 2 }).default('0').notNull(),
   amount: numeric('amount', { precision: 10, scale: 2 }).notNull(),
+  objetoImpuesto: varchar('objeto_impuesto', { length: 2 }).default('02').notNull(), // 01=No objeto, 02=Sí objeto
+  ivaRate: numeric('iva_rate', { precision: 10, scale: 6 }).default('0.160000').notNull(), // Tasa de IVA (0.16, 0.08, 0.00)
+  iepsRate: numeric('ieps_rate', { precision: 10, scale: 6 }).default('0.000000').notNull(), // Tasa de IEPS si aplica
+  isrRetentionRate: numeric('isr_retention_rate', { precision: 10, scale: 6 }).default('0.000000').notNull(), // Retención ISR
+  ivaRetentionRate: numeric('iva_retention_rate', { precision: 10, scale: 6 }).default('0.000000').notNull(), // Retención IVA
 });
 
 // --- Pagos (REP) ---
@@ -185,6 +188,10 @@ export const payments = pgTable('payments', {
   status: paymentStatusEnum('status').default('draft').notNull(),
   pdfUrl: text('pdf_url'),
   xmlUrl: text('xml_url'),
+  pdfPath: text('pdf_path'), // Ruta en Storage para regenerar URL firmada
+  xmlPath: text('xml_path'), // Ruta en Storage para regenerar URL firmada
+  uuid: varchar('uuid', { length: 36 }),
+  stampDate: timestamp('stamp_date'),
   operationNumber: varchar('operation_number', { length: 100 }),
   relationType: varchar('relation_type', { length: 2 }),
   relatedCfdis: text('related_cfdis'),

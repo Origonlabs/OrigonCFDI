@@ -7,6 +7,7 @@ import { User } from "firebase/auth"
 import { auth, firebaseEnabled } from "@/lib/firebase/client"
 import { useToast } from "@/hooks/use-toast"
 import { getInvoices, stampInvoice } from "@/app/actions/invoices"
+import { getUserAuth } from "@/lib/auth-client";
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -75,25 +76,35 @@ export function InvoicesList() {
     return () => unsubscribe();
   }, []);
 
-  const fetchInvoices = useCallback(async (uid: string) => {
+  const fetchInvoices = useCallback(async () => {
+    if (!user) return;
     setLoading(true);
-    const response = await getInvoices(uid);
+    try {
+      const { uid, token } = await getUserAuth(user);
+      const response = await getInvoices(uid, token);
 
-    if (response.success && response.data) {
-      setInvoices(response.data as Invoice[]);
-    } else {
+      if (response.success && response.data) {
+        setInvoices(response.data as Invoice[]);
+      } else {
+        toast({
+          title: "Error",
+          description: response.message || "No se pudieron cargar las facturas.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
       toast({
         title: "Error",
-        description: response.message || "No se pudieron cargar las facturas.",
+        description: error instanceof Error ? error.message : "No fue posible autenticar la sesión.",
         variant: "destructive",
       });
     }
     setLoading(false);
-  }, [toast]);
+  }, [user, toast]);
 
   useEffect(() => {
     if (user) {
-      fetchInvoices(user.uid);
+      fetchInvoices();
     }
   }, [user, fetchInvoices]);
 
@@ -102,10 +113,11 @@ export function InvoicesList() {
     setIsStamping(invoiceId);
     toast({ title: "Timbrando factura..." });
     try {
-        const result = await stampInvoice(invoiceId, user.uid);
+        const { uid, token } = await getUserAuth(user);
+        const result = await stampInvoice(invoiceId, uid, token);
         if (result.success) {
             toast({ title: "Éxito", description: result.message });
-            await fetchInvoices(user.uid);
+            await fetchInvoices();
         } else {
             toast({ title: "Error", description: result.message, variant: "destructive" });
         }

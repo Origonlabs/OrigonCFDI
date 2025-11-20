@@ -58,10 +58,13 @@ export default function SeriesListPage() {
   const fetchData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const [seriesResponse, profileResponse] = await Promise.all([
-      getSeries(user.uid),
-      getCompanyProfile(user.uid)
-    ]);
+    try {
+      const { getUserAuth } = await import('@/lib/auth-client');
+      const { uid, token } = await getUserAuth(user);
+      const [seriesResponse, profileResponse] = await Promise.all([
+        getSeries(uid, token),
+        getCompanyProfile(uid, token)
+      ]);
 
     if (seriesResponse.success && seriesResponse.data) {
       const seriesData = seriesResponse.data.map((serie: any) => ({
@@ -81,7 +84,13 @@ export default function SeriesListPage() {
     if (profileResponse.success && profileResponse.data) {
         setRfc(profileResponse.data.rfc);
     }
-
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "No fue posible autenticar la sesión.",
+        variant: "destructive",
+      });
+    }
     setLoading(false);
   }, [user, toast]);
 

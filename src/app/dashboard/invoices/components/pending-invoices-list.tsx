@@ -7,6 +7,7 @@ import { User } from "firebase/auth"
 import { auth, firebaseEnabled } from "@/lib/firebase/client"
 import { useToast } from "@/hooks/use-toast"
 import { getPendingInvoices } from "@/app/actions/invoices"
+import { getUserAuth } from "@/lib/auth-client";
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -69,25 +70,35 @@ export function PendingInvoicesList() {
     return () => unsubscribe();
   }, []);
 
-  const fetchPendingInvoices = useCallback(async (uid: string) => {
+  const fetchPendingInvoices = useCallback(async () => {
+    if (!user) return;
     setLoading(true);
-    const response = await getPendingInvoices(uid);
+    try {
+      const { uid, token } = await getUserAuth(user);
+      const response = await getPendingInvoices(uid, token);
 
-    if (response.success && response.data) {
-      setInvoices(response.data as Invoice[]);
-    } else {
+      if (response.success && response.data) {
+        setInvoices(response.data as Invoice[]);
+      } else {
+        toast({
+          title: "Error",
+          description: response.message || "No se pudieron cargar las facturas pendientes.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
       toast({
         title: "Error",
-        description: response.message || "No se pudieron cargar las facturas pendientes.",
+        description: error instanceof Error ? error.message : "No fue posible autenticar la sesión.",
         variant: "destructive",
       });
     }
     setLoading(false);
-  }, [toast]);
+  }, [user, toast]);
 
   useEffect(() => {
     if (user) {
-      fetchPendingInvoices(user.uid);
+      fetchPendingInvoices();
     }
   }, [user, fetchPendingInvoices]);
 

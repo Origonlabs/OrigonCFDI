@@ -8,8 +8,9 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { bankAccountSchema, type BankAccountFormValues } from "@/lib/schemas";
 import { getRateLimiter } from "@/lib/rate-limiter";
+import { verifyUserRequest } from "@/lib/auth-server";
 
-export const getBankAccounts = async (userId: string) => {
+export const getBankAccounts = async (userId: string, idToken: string) => {
   if (!db) {
     return { success: false, message: "Error de configuración: La conexión con la base de datos no está disponible." };
   }
@@ -17,7 +18,8 @@ export const getBankAccounts = async (userId: string) => {
     if (!userId) {
       return { success: false, message: "Usuario no autenticado." };
     }
-    const data = await db.select().from(bankAccounts).where(eq(bankAccounts.userId, userId));
+    const verifiedUserId = await verifyUserRequest(userId, idToken);
+    const data = await db.select().from(bankAccounts).where(eq(bankAccounts.userId, verifiedUserId));
     return { success: true, data };
   } catch (error) {
     console.error("Database Error (getBankAccounts):", error);
@@ -25,7 +27,7 @@ export const getBankAccounts = async (userId: string) => {
   }
 };
 
-export const addBankAccount = async (formData: BankAccountFormValues, userId: string) => {
+export const addBankAccount = async (formData: BankAccountFormValues, userId: string, idToken: string) => {
   const ratelimit = getRateLimiter();
   const { success: rateLimitSuccess } = await ratelimit.limit(userId);
   if (!rateLimitSuccess) {
@@ -40,11 +42,12 @@ export const addBankAccount = async (formData: BankAccountFormValues, userId: st
       return { success: false, message: "Usuario no autenticado." };
     }
     
+    const verifiedUserId = await verifyUserRequest(userId, idToken);
     const validatedData = bankAccountSchema.parse(formData);
     
     const data = await db.insert(bankAccounts).values({
       ...validatedData,
-      userId,
+      userId: verifiedUserId,
     }).returning();
 
     revalidatePath("/dashboard/settings/bank-accounts");

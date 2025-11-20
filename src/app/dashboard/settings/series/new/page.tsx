@@ -47,13 +47,23 @@ export default function NewSeriePage() {
             toast({ title: "Error", description: "Debes iniciar sesión para agregar una serie.", variant: "destructive" });
             return;
         }
-        const result = await addSerie(data, user.uid);
+        try {
+            const { getUserAuth } = await import('@/lib/auth-client');
+            const { uid, token } = await getUserAuth(user);
+            const result = await addSerie(data, uid, token);
 
         if (result.success) {
             toast({ title: "Éxito", description: "La serie se ha guardado correctamente." });
             router.push("/dashboard/settings/series");
         } else {
             toast({ title: "Error al guardar", description: result.message || "No se pudo guardar la serie.", variant: "destructive" });
+        }
+        } catch (error) {
+            toast({ 
+                title: "Error", 
+                description: error instanceof Error ? error.message : "No fue posible autenticar la sesión.", 
+                variant: "destructive" 
+            });
         }
     }
     

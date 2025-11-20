@@ -81,7 +81,10 @@ export default function SignupPage() {
         
         // This part would need a new server action to handle the certificate files
         // For now, we'll just save the basic info.
-        await saveCompanyProfile(profileData as ProfileFormValues, user.uid);
+        // En signup, no tenemos token aún, así que usamos una versión sin verificación
+        // o pasamos un token temporal. Por ahora, omitimos la verificación en signup.
+        const tempToken = await user.getIdToken();
+        await saveCompanyProfile(profileData as ProfileFormValues, user.uid, tempToken);
       }
       
       toast({

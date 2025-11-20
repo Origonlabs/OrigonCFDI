@@ -16,6 +16,7 @@ import { getClients } from "@/app/actions/clients"
 import { getPendingInvoices } from "@/app/actions/invoices"
 import { savePayment } from "@/app/actions/payments"
 import { paymentSchema, type PaymentFormValues, type ClientFormValues } from "@/lib/schemas"
+import { getUserAuth } from "@/lib/auth-client";
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
@@ -115,12 +116,14 @@ export default function NewPaymentPage() {
     return () => unsubscribe();
   }, []);
 
-  const fetchData = useCallback(async (uid: string) => {
+  const fetchData = useCallback(async () => {
+    if (!user) return;
     setLoading(true);
     try {
+      const { uid, token } = await getUserAuth(user);
       const [clientsRes, invoicesRes] = await Promise.all([
-          getClients(uid),
-          getPendingInvoices(uid)
+          getClients(uid, token),
+          getPendingInvoices(uid, token)
       ]);
 
       if (clientsRes.success && clientsRes.data) {
@@ -135,7 +138,7 @@ export default function NewPaymentPage() {
         toast({ title: "Error", description: "No se pudieron cargar las facturas pendientes.", variant: "destructive" });
       }
     } catch (error) {
-      toast({ title: "Error", description: "Ocurrió un error al cargar los datos.", variant: "destructive" });
+      toast({ title: "Error", description: error instanceof Error ? error.message : "Ocurrió un error al cargar los datos.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -143,7 +146,7 @@ export default function NewPaymentPage() {
   
   useEffect(() => {
     if (user) {
-      fetchData(user.uid);
+      fetchData();
     }
   }, [user, fetchData]);
   
@@ -155,12 +158,17 @@ export default function NewPaymentPage() {
       toast({ title: "Error", description: "Debes iniciar sesión para guardar un pago.", variant: "destructive" });
       return;
     }
-    const result = await savePayment(data, user.uid);
-    if (result.success && result.data) {
-        toast({ title: "Éxito", description: "El pago se ha guardado como borrador." });
-        setSavedPayment(result.data);
-    } else {
-        toast({ title: "Error al guardar", description: result.message || "No se pudo guardar el pago.", variant: "destructive" });
+    try {
+      const { uid, token } = await getUserAuth(user);
+      const result = await savePayment(data, uid, token);
+      if (result.success && result.data) {
+          toast({ title: "Éxito", description: "El pago se ha guardado como borrador." });
+          setSavedPayment(result.data);
+      } else {
+          toast({ title: "Error al guardar", description: result.message || "No se pudo guardar el pago.", variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ title: "Error al guardar", description: error instanceof Error ? error.message : "No fue posible validar tu sesión.", variant: "destructive" });
     }
   }
   

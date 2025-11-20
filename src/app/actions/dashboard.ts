@@ -5,8 +5,10 @@ import { invoices, clients } from '../../../drizzle/schema';
 import { and, eq, gte, sql, sum } from 'drizzle-orm';
 import { startOfMonth, endOfMonth, subDays, format, eachDayOfInterval } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { verifyUserRequest } from '@/lib/auth-server';
+import { checkUserPermission } from '@/lib/permissions';
 
-export const getDashboardStats = async (userId: string) => {
+export const getDashboardStats = async (userId: string, idToken: string) => {
     if (!db) {
         return { success: false, message: "Error de configuración: La conexión con la base de datos no está disponible." };
     }
@@ -15,6 +17,13 @@ export const getDashboardStats = async (userId: string) => {
             return { success: false, message: "Usuario no autenticado." };
         }
 
+        // Verificar permisos - todos los usuarios pueden ver su dashboard
+        const permissionCheck = await checkUserPermission(userId, 'canViewReports');
+        if (!permissionCheck.allowed) {
+            return { success: false, message: permissionCheck.message || "No tienes permisos para ver el dashboard." };
+        }
+
+        const verifiedUserId = await verifyUserRequest(userId, idToken);
         const now = new Date();
         const startOfCurrentMonth = startOfMonth(now);
         const endOfCurrentMonth = endOfMonth(now);
@@ -24,23 +33,23 @@ export const getDashboardStats = async (userId: string) => {
         const [totalFacturadoResult, facturasTimbradasResult, clientesActivosResult, saldoPendienteResult] = await Promise.all([
             // Total Facturado (Mes)
             db.select({ total: sum(sql<number>`CAST(${invoices.total} AS numeric)`) }).from(invoices).where(and(
-                eq(invoices.userId, userId),
+                eq(invoices.userId, verifiedUserId),
                 eq(invoices.status, 'stamped'),
                 gte(invoices.createdAt, startOfCurrentMonth),
                 sql`${invoices.createdAt} <= ${endOfCurrentMonth}`
             )),
             // Facturas Timbradas (Mes)
             db.select({ count: sql<number>`count(${invoices.id})` }).from(invoices).where(and(
-                eq(invoices.userId, userId),
+                eq(invoices.userId, verifiedUserId),
                 eq(invoices.status, 'stamped'),
                 gte(invoices.createdAt, startOfCurrentMonth),
                 sql`${invoices.createdAt} <= ${endOfCurrentMonth}`
             )),
             // Clientes Activos
-            db.select({ count: sql<number>`count(${clients.id})` }).from(clients).where(eq(clients.userId, userId)),
+            db.select({ count: sql<number>`count(${clients.id})` }).from(clients).where(eq(clients.userId, verifiedUserId)),
             // Saldo Pendiente (PPD)
             db.select({ total: sum(sql<number>`CAST(${invoices.total} AS numeric)`) }).from(invoices).where(and(
-                eq(invoices.userId, userId),
+                eq(invoices.userId, verifiedUserId),
                 eq(invoices.metodoPago, 'PPD'),
                 eq(invoices.status, 'stamped')
             ))
@@ -56,7 +65,7 @@ export const getDashboardStats = async (userId: string) => {
             total: invoices.total,
             createdAt: invoices.createdAt,
         }).from(invoices).where(and(
-            eq(invoices.userId, userId),
+            eq(invoices.userId, verifiedUserId),
             eq(invoices.status, 'stamped'),
             gte(invoices.createdAt, ninetyDaysAgo)
         ));

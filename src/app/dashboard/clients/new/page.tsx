@@ -38,13 +38,19 @@ export default function NewClientPage() {
             toast({ title: "Error", description: "Debes iniciar sesión para agregar un cliente.", variant: "destructive" });
             return;
         }
-        const result = await addClient(data, user.uid);
+        try {
+            const token = await user.getIdToken();
+            const result = await addClient(data, user.uid, token);
 
-        if (result.success) {
-            toast({ title: "Éxito", description: "El cliente se ha guardado correctamente." });
-            router.push("/dashboard/clients");
-        } else {
-            toast({ title: "Error al guardar", description: result.message || "No se pudo guardar la información del cliente.", variant: "destructive" });
+            if (result.success) {
+                toast({ title: "Éxito", description: "El cliente se ha guardado correctamente." });
+                router.push("/dashboard/clients");
+            } else {
+                toast({ title: "Error al guardar", description: result.message || "No se pudo guardar la información del cliente.", variant: "destructive" });
+            }
+        } catch (error) {
+            console.error(error);
+            toast({ title: "Error al guardar", description: "No fue posible validar tu sesión.", variant: "destructive" });
         }
     }
 

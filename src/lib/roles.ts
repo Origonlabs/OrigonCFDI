@@ -19,6 +19,14 @@ export interface RolePermissions {
   canViewReports: boolean;
   canManageUsers: boolean;
   canManageCertificates: boolean;
+
+  // Alias para compatibilidad con nombres usados en actions
+  create_invoice: boolean;
+  stamp_invoice: boolean;
+  cancel_invoice: boolean;
+  delete_invoice: boolean;
+  manage_certificates: boolean;
+  stamp_payment: boolean;
 }
 
 /**
@@ -40,6 +48,13 @@ export const rolePermissions: Record<UserRole, RolePermissions> = {
     canViewReports: true,
     canManageUsers: true,
     canManageCertificates: true,
+    // Alias
+    create_invoice: true,
+    stamp_invoice: true,
+    cancel_invoice: true,
+    delete_invoice: true,
+    manage_certificates: true,
+    stamp_payment: true,
   },
   company: {
     canCreateInvoices: true,
@@ -56,6 +71,13 @@ export const rolePermissions: Record<UserRole, RolePermissions> = {
     canViewReports: true,
     canManageUsers: false,
     canManageCertificates: true,
+    // Alias
+    create_invoice: true,
+    stamp_invoice: true,
+    cancel_invoice: true,
+    delete_invoice: true,
+    manage_certificates: true,
+    stamp_payment: true,
   },
   accountant: {
     canCreateInvoices: true,
@@ -72,6 +94,13 @@ export const rolePermissions: Record<UserRole, RolePermissions> = {
     canViewReports: true,
     canManageUsers: false,
     canManageCertificates: false,
+    // Alias
+    create_invoice: true,
+    stamp_invoice: true,
+    cancel_invoice: false,
+    delete_invoice: false,
+    manage_certificates: false,
+    stamp_payment: true,
   },
   client: {
     canCreateInvoices: false,
@@ -88,6 +117,13 @@ export const rolePermissions: Record<UserRole, RolePermissions> = {
     canViewReports: false,
     canManageUsers: false,
     canManageCertificates: false,
+    // Alias
+    create_invoice: false,
+    stamp_invoice: false,
+    cancel_invoice: false,
+    delete_invoice: false,
+    manage_certificates: false,
+    stamp_payment: false,
   },
 };
 

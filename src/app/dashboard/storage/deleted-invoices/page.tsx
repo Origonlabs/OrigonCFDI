@@ -8,6 +8,7 @@ import { User } from "firebase/auth"
 import { auth, firebaseEnabled } from "@/lib/firebase/client"
 import { useToast } from "@/hooks/use-toast"
 import { getDeletedInvoices } from "@/app/actions/invoices"
+import { getUserAuth } from "@/lib/auth-client";
 
 import { Button } from "@/components/ui/button"
 import {
@@ -62,25 +63,35 @@ export default function DeletedInvoicesPage() {
     return () => unsubscribe();
   }, []);
 
-  const fetchDeletedInvoices = useCallback(async (uid: string) => {
+  const fetchDeletedInvoices = useCallback(async () => {
+    if (!user) return;
     setLoading(true);
-    const response = await getDeletedInvoices(uid);
+    try {
+      const { uid, token } = await getUserAuth(user);
+      const response = await getDeletedInvoices(uid, token);
 
-    if (response.success && response.data) {
-      setInvoices(response.data as unknown as DeletedInvoice[]);
-    } else {
+      if (response.success && response.data) {
+        setInvoices(response.data as unknown as DeletedInvoice[]);
+      } else {
+        toast({
+          title: "Error",
+          description: response.message || "No se pudieron cargar las facturas eliminadas.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
       toast({
         title: "Error",
-        description: response.message || "No se pudieron cargar las facturas eliminadas.",
+        description: error instanceof Error ? error.message : "No fue posible autenticar la sesión.",
         variant: "destructive",
       });
     }
     setLoading(false);
-  }, [toast]);
+  }, [user, toast]);
 
   useEffect(() => {
     if (user) {
-      fetchDeletedInvoices(user.uid);
+      fetchDeletedInvoices();
     }
   }, [user, fetchDeletedInvoices]);
   

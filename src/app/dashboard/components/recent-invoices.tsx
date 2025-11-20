@@ -10,6 +10,7 @@ import { auth, firebaseEnabled } from "@/lib/firebase/client";
 import { useToast } from "@/hooks/use-toast";
 import { getInvoices } from "@/app/actions/invoices";
 import { cn } from "@/lib/utils";
+import { getUserAuth } from "@/lib/auth-client";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -78,25 +79,35 @@ export function RecentInvoices() {
         return () => unsubscribe();
     }, []);
 
-    const fetchInvoices = useCallback(async (uid: string) => {
+    const fetchInvoices = useCallback(async () => {
+        if (!user) return;
         setLoading(true);
-        const response = await getInvoices(uid);
+        try {
+            const { uid, token } = await getUserAuth(user);
+            const response = await getInvoices(uid, token);
 
-        if (response.success && response.data) {
-            setInvoices((response.data as Invoice[]).slice(0, 5));
-        } else {
+            if (response.success && response.data) {
+                setInvoices((response.data as Invoice[]).slice(0, 5));
+            } else {
+                toast({
+                    title: "Error",
+                    description: response.message || "No se pudieron cargar las facturas recientes.",
+                    variant: "destructive",
+                });
+            }
+        } catch (error) {
             toast({
                 title: "Error",
-                description: response.message || "No se pudieron cargar las facturas recientes.",
+                description: error instanceof Error ? error.message : "No fue posible autenticar la sesión.",
                 variant: "destructive",
             });
         }
         setLoading(false);
-    }, [toast]);
+    }, [user, toast]);
 
     useEffect(() => {
         if (user) {
-            fetchInvoices(user.uid);
+            fetchInvoices();
         }
     }, [user, fetchInvoices]);
     

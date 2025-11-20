@@ -8,6 +8,7 @@ import { EyeRegular, FilterRegular, DismissCircleRegular, ArrowDownloadRegular, 
 import { auth, firebaseEnabled } from "@/lib/firebase/client";
 import { useToast } from "@/hooks/use-toast";
 import { getPayments } from "@/app/actions/payments";
+import { getUserAuth } from "@/lib/auth-client";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -56,25 +57,35 @@ export default function PaymentsPage() {
     return () => unsubscribe();
   }, []);
 
-  const fetchPayments = useCallback(async (uid: string) => {
+  const fetchPayments = useCallback(async () => {
+    if (!user) return;
     setLoading(true);
-    const response = await getPayments(uid);
+    try {
+      const { uid, token } = await getUserAuth(user);
+      const response = await getPayments(uid, token);
 
-    if (response.success && response.data) {
-      setPayments(response.data as Payment[]);
-    } else {
+      if (response.success && response.data) {
+        setPayments(response.data as Payment[]);
+      } else {
+        toast({
+          title: "Error",
+          description: response.message || "No se pudieron cargar los pagos.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
       toast({
         title: "Error",
-        description: response.message || "No se pudieron cargar los pagos.",
+        description: error instanceof Error ? error.message : "No fue posible autenticar la sesión.",
         variant: "destructive",
       });
     }
     setLoading(false);
-  }, [toast]);
+  }, [user, toast]);
 
   useEffect(() => {
     if (user) {
-      fetchPayments(user.uid);
+      fetchPayments();
     }
   }, [user, fetchPayments]);
   

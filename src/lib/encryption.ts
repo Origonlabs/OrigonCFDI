@@ -24,7 +24,10 @@ function deriveKey(masterKey: string, salt: Buffer): Buffer {
  */
 export function encrypt(plaintext: string): string {
   if (!ENCRYPTION_KEY) {
-    console.warn('ENCRYPTION_KEY not configured. Data will not be encrypted.');
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('ENCRYPTION_KEY es obligatorio en producción. Configure la variable de entorno ENCRYPTION_KEY.');
+    }
+    console.warn('⚠️ DESARROLLO: ENCRYPTION_KEY no configurado. Datos NO cifrados.');
     return plaintext;
   }
 
@@ -64,7 +67,10 @@ export function encrypt(plaintext: string): string {
  */
 export function decrypt(encryptedData: string): string {
   if (!ENCRYPTION_KEY) {
-    console.warn('ENCRYPTION_KEY not configured. Returning data as-is.');
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('ENCRYPTION_KEY es obligatorio en producción. Configure la variable de entorno ENCRYPTION_KEY.');
+    }
+    console.warn('⚠️ DESARROLLO: ENCRYPTION_KEY no configurado. Devolviendo datos sin descifrar.');
     return encryptedData;
   }
 

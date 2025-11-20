@@ -8,6 +8,7 @@ import { EyeRegular, FilterRegular, ArrowDownloadRegular, ChevronDownRegular, Ch
 import { auth, firebaseEnabled } from "@/lib/firebase/client";
 import { useToast } from "@/hooks/use-toast";
 import { getCanceledPayments } from "@/app/actions/payments";
+import { getUserAuth } from "@/lib/auth-client";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -55,25 +56,35 @@ export default function CanceledPaymentsPage() {
     return () => unsubscribe();
   }, []);
 
-  const fetchCanceledPayments = useCallback(async (uid: string) => {
+  const fetchCanceledPayments = useCallback(async () => {
+    if (!user) return;
     setLoading(true);
-    const response = await getCanceledPayments(uid);
+    try {
+      const { uid, token } = await getUserAuth(user);
+      const response = await getCanceledPayments(uid, token);
 
-    if (response.success && response.data) {
-      setPayments(response.data as Payment[]);
-    } else {
+      if (response.success && response.data) {
+        setPayments(response.data as Payment[]);
+      } else {
+        toast({
+          title: "Error",
+          description: response.message || "No se pudieron cargar los pagos cancelados.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
       toast({
         title: "Error",
-        description: response.message || "No se pudieron cargar los pagos cancelados.",
+        description: error instanceof Error ? error.message : "No fue posible autenticar la sesión.",
         variant: "destructive",
       });
     }
     setLoading(false);
-  }, [toast]);
+  }, [user, toast]);
 
   useEffect(() => {
     if (user) {
-      fetchCanceledPayments(user.uid);
+      fetchCanceledPayments();
     }
   }, [user, fetchCanceledPayments]);
   

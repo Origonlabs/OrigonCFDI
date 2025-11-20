@@ -95,11 +95,16 @@ const conceptSchema = z.object({
   objetoImpuesto: z.string().min(1, "Selecciona el objeto de impuesto."),
   amount: z.coerce.number(),
   impuestos: z.array(impuestoSchema).optional(),
-  ivaTasa: z.number().optional(),
-  retencionIsr: z.boolean().optional(),
-  retencionIsrTasa: z.number().optional(),
-  retencionIva: z.boolean().optional(),
-  retencionIvaTasa: z.number().optional(),
+  // IVA - Soporta 0%, 8% (frontera), 16% (general)
+  ivaTasa: z.number().min(0).max(0.16).optional().default(0.16),
+  // IEPS - Soporta varias tasas (3%, 8%, 26.5%, 30%, 53%)
+  iepsTasa: z.number().min(0).max(0.53).optional().default(0),
+  // Retenciones ISR
+  retencionIsr: z.boolean().optional().default(false),
+  retencionIsrTasa: z.number().min(0).max(0.35).optional().default(0.106667), // 10.6667% por defecto
+  // Retenciones IVA
+  retencionIva: z.boolean().optional().default(false),
+  retencionIvaTasa: z.number().min(0).max(0.16).optional().default(0.106666), // 2/3 del IVA (10.6666%)
 });
 export type Concepto = z.infer<typeof conceptSchema>;
 
