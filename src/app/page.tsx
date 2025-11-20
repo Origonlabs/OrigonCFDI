@@ -10,7 +10,7 @@ export default function LoginPage() {
       className="relative flex min-h-svh flex-col items-center justify-center overflow-hidden bg-background p-6 md:p-10"
     >
       <div className="absolute inset-0 z-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-background" />
+        <div className="absolute inset-0 bg-background" />
         <div className="absolute -top-[40%] -left-[20%] h-[800px] w-[800px] rounded-full bg-primary/5 blur-3xl" />
         <div className="absolute top-[20%] -right-[20%] h-[600px] w-[600px] rounded-full bg-blue-500/5 blur-3xl" />
       </div>
@@ -34,7 +34,7 @@ export default function LoginPage() {
           </div>
         </a>
 
-        <div className="backdrop-blur-sm bg-card/50 border shadow-xl rounded-xl overflow-hidden">
+        <div className="backdrop-blur-sm bg-card/50 shadow-xl rounded-xl overflow-hidden">
           <LoginForm className="p-6" />
         </div>
 
