@@ -374,7 +374,7 @@ export default function CertificatesPage() {
         <CardContent className="space-y-2 text-sm">
           <ol className="list-decimal list-inside space-y-2">
             <li>Ingresa al portal del SAT con tu RFC y contraseña</li>
-            <li>Ve a la sección "Trámites" {">"} "Certificado de Sello Digital"</li>
+            <li>Ve a la sección &ldquo;Trámites&rdquo; &gt; &ldquo;Certificado de Sello Digital&rdquo;</li>
             <li>Genera tu certificado (si es la primera vez) o renuévalo</li>
             <li>Descarga los archivos .cer (certificado) y .key (llave privada)</li>
             <li>Guarda la contraseña que estableciste para la llave privada</li>

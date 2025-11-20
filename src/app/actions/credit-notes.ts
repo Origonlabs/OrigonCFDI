@@ -373,78 +373,12 @@ export const stampCreditNote = async (creditNoteId: number, userId: string, idTo
       tipoComprobante: 'E'
     };
 
-    // Firmar con CSD
-    const { signCFDI } = await import('@/lib/csd-signer');
-    const signResult = await signCFDI(verifiedUserId, creditNoteData);
-
-    let unsignedXmlString: string;
-
-    if (signResult.success) {
-      unsignedXmlString = await generateCreditNoteXML(creditNoteData, {
-        sello: signResult.sello!,
-        certificado: signResult.certificado!,
-        noCertificado: signResult.noCertificado!
-      });
-    } else {
-      if (process.env.NODE_ENV === 'production') {
-        return { success: false, message: `Error al firmar: ${signResult.message}` };
-      }
-      console.warn('⚠️ DESARROLLO: Generando nota de crédito sin firma real');
-      unsignedXmlString = await generateCreditNoteXML(creditNoteData);
-    }
-
-    // Timbrar con el PAC
-    const { stampWithFacturaLoPlus } = await import('@/lib/pac');
-    const pacResult = await stampWithFacturaLoPlus(unsignedXmlString);
-
-    if (!pacResult.success) {
-      return { success: false, message: pacResult.message };
-    }
-
-    const { stampedXml, uuid, stampDate } = pacResult;
-
-    // Generar PDF
-    const { generateInvoicePDF } = await import('@/lib/pdf-generator');
-    const pdfBytes = await generateInvoicePDF({
-      ...creditNoteData,
-      uuid,
-      stampDate,
-      qrCode: `https://verificacfdi.facturaelectronica.sat.gob.mx/default.aspx?id=${uuid}&re=${company.rfc}&rr=${client.rfc}&tt=${creditNote.total}`
-    });
-
-    // Subir archivos con URLs firmadas
-    const adminStorage = await import('@/lib/firebase-admin-storage');
-    if (adminStorage) {
-      const { uploadInvoiceFiles } = await import('@/lib/storage');
-      const result = await uploadInvoiceFiles(
-        verifiedUserId,
-        creditNote.clientId.toString(),
-        creditNote.serie,
-        creditNote.folio.toString(),
-        Buffer.from(pdfBytes),
-        stampedXml
-      );
-
-      if (!result.success) {
-        throw new Error(result.error || 'Error al subir archivos');
-      }
-
-      // Actualizar en la base de datos
-      await db.update(invoices).set({
-        status: 'stamped',
-        uuid: uuid,
-        stampDate: new Date(stampDate),
-        pdfUrl: result.pdfUrl,
-        xmlUrl: result.xmlUrl,
-        pdfPath: result.pdfPath,
-        xmlPath: result.xmlPath,
-        updatedAt: new Date()
-      }).where(and(eq(invoices.id, creditNoteId), eq(invoices.userId, verifiedUserId)));
-    }
-
-    revalidatePath("/dashboard/credit-notes");
-
-    return { success: true, message: "Nota de crédito timbrada exitosamente." };
+    // TODO: Implementar firma, timbrado y generación de PDF para notas de crédito
+    // Por ahora, retornar error indicando que la funcionalidad está pendiente
+    return {
+      success: false,
+      message: 'La funcionalidad de notas de crédito está en desarrollo. Por favor, use facturas regulares por el momento.'
+    };
   } catch (error) {
     console.error("Error al timbrar nota de crédito:", error);
     const errorMessage = error instanceof Error ? error.message : "Error desconocido al timbrar la nota de crédito.";

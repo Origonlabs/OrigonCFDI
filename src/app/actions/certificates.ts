@@ -118,7 +118,8 @@ export const uploadCertificate = async (
     const cert = forge.pki.certificateFromPem(certificatePem);
     const subject = cert.subject.attributes;
     const rfcAttr = subject.find(attr => attr.shortName === 'serialNumber' || attr.name === 'serialNumber');
-    const rfc = rfcAttr?.value || '';
+    const rfcValue = rfcAttr?.value;
+    const rfc = typeof rfcValue === 'string' ? rfcValue : '';
 
     if (!rfc) {
       return { success: false, message: "No se pudo extraer el RFC del certificado." };
@@ -139,10 +140,10 @@ export const uploadCertificate = async (
     // Guardar nuevo certificado
     await db.insert(csdCertificates).values({
       userId: verifiedUserId,
-      certificateNumber: certNumber,
-      rfc: rfc,
-      privateKey: encryptedData.privateKey,
-      certificate: encryptedData.certificate,
+      certificateNumber: String(certNumber),
+      rfc: String(rfc),
+      privateKey: String(encryptedData.privateKey),
+      certificate: String(encryptedData.certificate),
       validFrom: certInfo.validFrom!,
       validTo: certInfo.validTo!,
       isActive: true

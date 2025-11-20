@@ -333,6 +333,12 @@ export default function NewInvoicePage() {
           discount: 0,
           objetoImpuesto: '02',
           amount: product.unitPrice,
+          ivaTasa: 0.16,
+          iepsTasa: 0,
+          retencionIsr: false,
+          retencionIsrTasa: 0,
+          retencionIva: false,
+          retencionIvaTasa: 0,
           impuestos: [{ tipo: 'Traslado', impuesto: '002', tipoFactor: 'Tasa', tasa: 0.16, base: product.unitPrice }]
         });
     }
@@ -639,7 +645,7 @@ export default function NewInvoicePage() {
           <Card className="mt-4">
             <CardHeader>
               <div className="flex items-center gap-4">
-                <Button type="button" variant="outline" size="sm" onClick={() => conceptAppend({ productId: 0, description: "", satKey: "", unitKey: "", quantity: 1, unitPrice: 0, discount: 0, objetoImpuesto: '02', amount: 0, impuestos: [{ tipo: 'Traslado', impuesto: '002', tipoFactor: 'Tasa', tasa: 0.16, base: 0 }] })}>
+                <Button type="button" variant="outline" size="sm" onClick={() => conceptAppend({ productId: 0, description: "", satKey: "", unitKey: "", quantity: 1, unitPrice: 0, discount: 0, objetoImpuesto: '02', amount: 0, ivaTasa: 0.16, iepsTasa: 0, retencionIsr: false, retencionIsrTasa: 0, retencionIva: false, retencionIvaTasa: 0, impuestos: [{ tipo: 'Traslado', impuesto: '002', tipoFactor: 'Tasa', tasa: 0.16, base: 0 }] })}>
                   <AddCircleRegular className="mr-2 h-4 w-4" />
                    Agregar partida (productos y servicios) al documento
                 </Button>

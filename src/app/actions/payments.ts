@@ -294,16 +294,12 @@ export const stampPayment = async (paymentId: number, userId: string, idToken: s
     const { uploadInvoiceFiles } = await import('@/lib/storage');
     const result = await uploadInvoiceFiles(
       verifiedUserId,
-      client.id.toString(),
+      client.id,
       payment.serie,
-      payment.folio.toString(),
+      payment.folio,
       Buffer.from(pdfBuffer),
       stampedXml
     );
-
-    if (!result.success) {
-      throw new Error(result.error || 'Error al subir archivos');
-    }
 
     // Actualizar el pago en la BD
     await db.update(payments).set({

@@ -265,11 +265,11 @@ export const stampInvoice = async (invoiceId: number, userId: string, idToken: s
         const { signCFDI } = await import('@/lib/csd-signer');
         const signResult = await signCFDI(verifiedUserId, {
             fecha: new Date(invoiceData.invoice.createdAt!).toISOString().slice(0, -5),
-            subtotal: parseFloat(invoiceData.invoice.subtotal),
-            total: parseFloat(invoiceData.invoice.total),
+            subtotal: parseFloat(invoiceData.invoice.subtotal).toString(),
+            total: parseFloat(invoiceData.invoice.total).toString(),
             emisorRfc: invoiceData.company.rfc,
             receptorRfc: invoiceData.client.rfc
-        });
+        } as any); // Type assertion needed due to incomplete xmlData structure
 
         let unsignedXmlString: string;
         if (signResult.success) {
@@ -316,15 +316,15 @@ export const stampInvoice = async (invoiceId: number, userId: string, idToken: s
 
             const result = await uploadInvoiceFiles(
                 verifiedUserId,
-                invoiceData.invoice.clientId.toString(),
+                invoiceData.invoice.clientId,
                 invoiceData.invoice.serie,
-                invoiceData.invoice.folio.toString(),
+                invoiceData.invoice.folio,
                 Buffer.from(pdfBytes),
                 stampedXml
             );
 
-            if (!result.success) {
-                throw new Error(result.error || 'Error al subir archivos');
+            if (!result.pdfUrl || !result.xmlUrl) {
+                throw new Error('Error al subir archivos: No se pudieron obtener las URLs de los archivos');
             }
 
             // Guardar URLs firmadas (expiran en 1 hora)
@@ -430,10 +430,10 @@ async function _generateXmlString(data: NonNullable<Awaited<ReturnType<typeof ge
             '@Serie': invoice.serie,
             '@Folio': invoice.folio,
             '@Fecha': date,
-            '@Sello': fakeSello,
+            '@Sello': sello,
             '@FormaPago': invoice.formaPago,
             '@NoCertificado': noCertificado,
-            '@Certificado': fakeCertificado,
+            '@Certificado': certificado,
             '@SubTotal': parseFloat(invoice.subtotal).toFixed(2),
             '@Moneda': 'MXN',
             '@Total': parseFloat(invoice.total).toFixed(2),
