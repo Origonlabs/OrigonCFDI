@@ -1,19 +1,15 @@
 import type {Metadata} from 'next';
-import { Inter, Space_Grotesk } from 'next/font/google';
+import { Red_Hat_Display } from 'next/font/google';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { ThemeProvider } from '@/components/theme-provider';
 
-const inter = Inter({
+const redHatDisplay = Red_Hat_Display({
   subsets: ['latin'],
-  variable: '--font-inter',
+  variable: '--font-red-hat-display',
   display: 'swap',
-});
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ['latin'],
-  variable: '--font-space-grotesk',
-  display: 'swap',
+  weight: ['300', '400', '500', '600', '700', '800', '900'],
+  style: ['normal', 'italic'],
 });
 
 export const metadata: Metadata = {
@@ -27,8 +23,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" suppressHydrationWarning={true} className={`${inter.variable} ${spaceGrotesk.variable}`}>
-      <body className="font-body antialiased" suppressHydrationWarning={true}>
+    <html lang="es" suppressHydrationWarning={true} className={redHatDisplay.variable}>
+      <body className="font-sans antialiased" suppressHydrationWarning={true}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
