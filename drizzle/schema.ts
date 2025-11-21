@@ -10,6 +10,12 @@ export const users = pgTable('users', {
   userId: varchar('user_id', { length: 256 }).notNull().unique(), // Firebase UID
   email: varchar('email', { length: 256 }).notNull().unique(),
   role: userRoleEnum('role').default('company').notNull(),
+  // Multi-tenant: ownerId vincula usuarios secundarios a la empresa principal
+  // null = es una cuenta principal (company owner)
+  // valor = es un usuario creado por esa empresa (accountant, client)
+  ownerId: varchar('owner_id', { length: 256 }),
+  displayName: varchar('display_name', { length: 256 }),
+  isActive: boolean('is_active').default(true).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

@@ -69,7 +69,7 @@ export const rolePermissions: Record<UserRole, RolePermissions> = {
     canManageBankAccounts: true,
     canManageSettings: true,
     canViewReports: true,
-    canManageUsers: false,
+    canManageUsers: true, // Company puede gestionar sus propios usuarios (multi-tenant)
     canManageCertificates: true,
     // Alias
     create_invoice: true,

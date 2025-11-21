@@ -7,8 +7,9 @@ import type { UserRole } from '@/lib/roles';
 
 /**
  * Obtiene el rol de un usuario
+ * Si el usuario no existe en la BD pero está autenticado, lo crea con rol 'company' por defecto
  */
-export async function getUserRole(userId: string): Promise<{ success: true; role: UserRole } | { success: false; message: string }> {
+export async function getUserRole(userId: string, email?: string): Promise<{ success: true; role: UserRole } | { success: false; message: string }> {
   if (!db) {
     return { success: false, message: "Error de configuración: La conexión con la base de datos no está disponible." };
   }
@@ -25,8 +26,30 @@ export async function getUserRole(userId: string): Promise<{ success: true; role
       .limit(1);
 
     if (!user) {
-      // Si no existe el usuario en la BD, retornar error (debe crearse en signup)
-      return { success: false, message: "Usuario no encontrado en la base de datos." };
+      // Si no existe el usuario en la BD pero está autenticado, crearlo con rol 'company'
+      // Esto permite que usuarios existentes en Firebase que no tienen registro en la BD puedan acceder
+      console.log(`Usuario ${userId} no encontrado en BD, creando con rol 'company'...`);
+
+      try {
+        await db.insert(users).values({
+          userId,
+          email: email || `${userId}@temp.local`, // Email temporal si no se proporciona
+          role: 'company',
+        });
+        return { success: true, role: 'company' };
+      } catch (insertError) {
+        // Si falla por duplicado, intentar obtener de nuevo
+        const [retryUser] = await db
+          .select({ role: users.role })
+          .from(users)
+          .where(eq(users.userId, userId))
+          .limit(1);
+
+        if (retryUser) {
+          return { success: true, role: retryUser.role as UserRole };
+        }
+        throw insertError;
+      }
     }
 
     return { success: true, role: user.role as UserRole };

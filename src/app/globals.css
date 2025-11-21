@@ -92,6 +92,10 @@ body {
 }
 
 @layer base {
+  * {
+    @apply border-border;
+  }
+
   body {
     @apply bg-background text-foreground;
   }
@@ -103,10 +107,8 @@ body {
   background-position: center;
 }
 
-@media (prefers-color-scheme: dark) {
-  .login-background {
-    background-image: url('/Origon_web_dark.webp');
-  }
+.dark .login-background {
+  background-image: url('/Origon_web_dark.webp');
 }
 
 

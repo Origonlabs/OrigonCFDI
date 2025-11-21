@@ -8,6 +8,7 @@ import {
   DatabaseRegular,
   ChatRegular,
   SettingsRegular,
+  PersonRegular,
 } from "@/icons/fluent";
 import type { UserRole } from "@/lib/roles";
 import type { RolePermissions } from "@/lib/roles";
@@ -74,6 +75,14 @@ export const navigationLinks: NavItem[] = [
     permission: 'canManageSettings',
     sublinks: [
       { href: "/dashboard/settings/document-types", label: "Tipos de documentos", permission: 'canManageSettings' },
+    ],
+  },
+  {
+    title: "Usuarios",
+    icon: PersonRegular,
+    permission: 'canManageUsers',
+    sublinks: [
+      { href: "/dashboard/users", label: "Gestionar Usuarios", permission: 'canManageUsers' },
     ],
   },
   {

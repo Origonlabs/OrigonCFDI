@@ -229,25 +229,18 @@ export const signupSchema = z.object({
     .min(12, "El RFC debe tener 12 o 13 caracteres.")
     .max(13, "El RFC debe tener 12 o 13 caracteres.")
     .regex(/^[A-Z&Ñ]{3,4}\d{6}(?:[A-Z\d]{3})?$/, { message: "El formato del RFC no es válido." }),
-  passwordCertificado: z.string().min(1, "La contraseña del certificado es requerida."),
-  archivoCer: z
-    .any()
-    .refine((file) => !!file, "El archivo .cer es obligatorio.")
-    .refine((file) => file?.size <= MAX_FILE_SIZE, `El tamaño máximo es 500KB.`)
-    .refine(
-      (file) => file?.name?.endsWith(".cer"),
-      "Solo se aceptan archivos .cer"
-    ),
-  archivoKey: z
-    .any()
-    .refine((file) => !!file, "El archivo .key es obligatorio.")
-    .refine((file) => file?.size <= MAX_FILE_SIZE, `El tamaño máximo es 500KB.`)
-    .refine(
-      (file) => file?.name?.endsWith(".key"),
-      "Solo se aceptan archivos .key"
-    ),
+  // Campos opcionales para registro con correo (no OAuth)
+  password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres.").optional().or(z.literal("")),
+  confirmPassword: z.string().optional().or(z.literal("")),
+  // Campos de certificado opcionales (se pueden agregar después)
+  passwordCertificado: z.string().optional().or(z.literal("")),
+  archivoCer: z.any().optional(),
+  archivoKey: z.any().optional(),
 }).refine(data => data.email === data.confirmEmail, {
   message: "Los correos electrónicos no coinciden.",
   path: ["confirmEmail"],
+}).refine(data => !data.password || data.password === data.confirmPassword, {
+  message: "Las contraseñas no coinciden.",
+  path: ["confirmPassword"],
 });
 export type SignupFormValues = z.infer<typeof signupSchema>;
