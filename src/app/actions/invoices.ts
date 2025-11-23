@@ -288,7 +288,7 @@ export const stampInvoice = async (invoiceId: number, userId: string, idToken: s
             unsignedXmlString = await _generateXmlString(invoiceData);
         }
 
-        const pacResult = await stampWithFacturaLoPlus(unsignedXmlString);
+        const pacResult = await stampWithFacturaLoPlus(unsignedXmlString, invoiceData.company);
 
         if (!pacResult.success) {
             return { success: false, message: pacResult.message };

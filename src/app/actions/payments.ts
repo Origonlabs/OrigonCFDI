@@ -272,7 +272,7 @@ export const stampPayment = async (paymentId: number, userId: string, idToken: s
 
     // Timbrar con el PAC
     const { stampWithFacturaLoPlus } = await import('@/lib/pac');
-    const pacResult = await stampWithFacturaLoPlus(paymentXml);
+    const pacResult = await stampWithFacturaLoPlus(paymentXml, company);
 
     if (!pacResult.success) {
       return { success: false, message: pacResult.message };

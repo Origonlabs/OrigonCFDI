@@ -5,8 +5,19 @@ import { Buffer } from 'buffer';
 import { create } from 'xmlbuilder2';
 
 const PAC_URL = 'https://dev.facturaloplus.com/api/rest/servicio/timbrar';
+const PAC_PROD_URL = process.env.FACTURALOPLUS_PROD_URL;
 const PAC_USER = process.env.FACTURALOPLUS_USER;
 const PAC_API_KEY = process.env.FACTURALOPLUS_API_KEY;
+
+export type PacConfig = {
+  pacProvider?: string | null;
+  pacEnvironment?: 'test' | 'production' | null;
+  pacUsername?: string | null;
+  pacPassword?: string | null;
+  pacApiKey?: string | null;
+  pacApiUrl?: string | null;
+  pacIsActive?: boolean | null;
+};
 
 interface PacSuccessResponse {
   data: {
@@ -18,9 +29,22 @@ interface PacSuccessResponse {
   [key: string]: unknown; // Permite propiedades adicionales pero con tipo más seguro
 }
 
-export async function stampWithFacturaLoPlus(xmlString: string): Promise<{ success: true; stampedXml: string; uuid: string; stampDate: string; } | { success: false; message: string; }> {
-  if (!PAC_USER || !PAC_API_KEY) {
-    const message = 'Credenciales del PAC (FACTURALOPLUS_USER, FACTURALOPLUS_API_KEY) no configuradas en el servidor.';
+export async function stampWithFacturaLoPlus(
+  xmlString: string,
+  config?: PacConfig
+): Promise<{ success: true; stampedXml: string; uuid: string; stampDate: string; } | { success: false; message: string; }> {
+  const isActive = config?.pacIsActive ?? true;
+  const pacUser = config?.pacUsername || PAC_USER;
+  const pacKey = config?.pacApiKey || config?.pacPassword || PAC_API_KEY;
+  const environment = (config?.pacEnvironment || 'test') as 'test' | 'production';
+  const pacUrl = config?.pacApiUrl || (environment === 'production' ? PAC_PROD_URL : PAC_URL);
+
+  if (!isActive) {
+    return { success: false, message: 'El PAC está desactivado en la configuración de la empresa.' };
+  }
+
+  if (!pacUser || !pacKey || !pacUrl) {
+    const message = 'Configura tu PAC en Configuración > PAC / Timbrado (usuario, API key y URL).';
     console.error(message);
     return { success: false, message };
   }
@@ -28,13 +52,13 @@ export async function stampWithFacturaLoPlus(xmlString: string): Promise<{ succe
   const xmlBase64 = Buffer.from(xmlString).toString('base64');
 
   const requestBody = {
-    user: PAC_USER,
-    apikey: PAC_API_KEY,
+    user: pacUser,
+    apikey: pacKey,
     xml: xmlBase64,
   };
 
   try {
-    const response = await fetch(PAC_URL, {
+    const response = await fetch(pacUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(requestBody),

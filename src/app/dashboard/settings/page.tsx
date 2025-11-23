@@ -30,6 +30,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SkeletonImage } from "@/components/ui/skeleton-image";
+import { Switch } from "@/components/ui/switch";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -69,6 +70,8 @@ export default function SettingsPage() {
     defaultValues: {
       companyName: "", rfc: "", street: "", exteriorNumber: "", interiorNumber: "", state: "", municipality: "", neighborhood: "", zip: "", phone: "", phone2: "", fax: "", city: "", web: "", contadorEmail: "",
       taxRegime: "", commercialMessage: "", logoUrl: "", defaultEmailMessage: "", templateCfdi33: "costine-33", templateCfdi40: "costine-40", templateRep: "costine-rep",
+      customDomain: "",
+      pacProvider: "", pacEnvironment: "test", pacUsername: "", pacPassword: "", pacApiKey: "", pacApiUrl: "", pacWebhookUrl: "", pacIsActive: false,
     },
   });
 
@@ -131,8 +134,80 @@ export default function SettingsPage() {
         setLoading(false);
       }
     });
-    return () => unsubscribe();
+      return () => unsubscribe();
   }, [fetchProfile]);
+
+  const [verifyingDomain, setVerifyingDomain] = useState(false);
+  const [domainRecord, setDomainRecord] = useState<{ host: string; token: string; recordName: string } | null>(null);
+  const [domainError, setDomainError] = useState<string | null>(null);
+  const [domainInfoLoaded, setDomainInfoLoaded] = useState(false);
+  const domainValue = profileForm.watch('customDomain');
+
+  const handleShowDomainDns = async (domainOverride?: string) => {
+    if (!user) {
+      toast({ title: "Error", description: "Debes iniciar sesión.", variant: "destructive" });
+      return;
+    }
+    const rawDomain = domainOverride ?? profileForm.getValues('customDomain');
+    if (!rawDomain) {
+      setDomainError("Primero ingresa y guarda un dominio.");
+      return;
+    }
+    try {
+      setVerifyingDomain(true);
+      const { getUserAuth } = await import('@/lib/auth-client');
+      const { uid, token } = await getUserAuth(user);
+      const { getDomainVerificationInfo } = await import('@/app/actions/companies');
+      const res = await getDomainVerificationInfo(uid, token, rawDomain);
+      if (res.success && res.data) {
+        setDomainRecord(res.data as any);
+        setDomainError(null);
+      } else {
+        toast({ title: "No disponible", description: res.message || "Configura un dominio primero.", variant: "destructive" });
+        setDomainError(res.message || "Configura un dominio primero.");
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "No se pudo obtener la instrucción DNS.", variant: "destructive" });
+      setDomainError("No se pudo obtener la instrucción DNS.");
+    } finally {
+      setVerifyingDomain(false);
+    }
+  };
+
+  const handleVerifyDomain = async () => {
+    if (!user) {
+      toast({ title: "Error", description: "Debes iniciar sesión.", variant: "destructive" });
+      return;
+    }
+    try {
+      setVerifyingDomain(true);
+      const { getUserAuth } = await import('@/lib/auth-client');
+      const { uid, token } = await getUserAuth(user);
+      const { verifyCustomDomain, getDomainVerificationInfo } = await import('@/app/actions/companies');
+      const verify = await verifyCustomDomain(uid, token);
+      if (verify.success) {
+        toast({ title: "Dominio verificado", description: "El registro TXT fue encontrado." });
+        setDomainError(null);
+      } else {
+        toast({ title: "No verificado", description: verify.message || "No se encontró el TXT. Espera la propagación y reintenta.", variant: "destructive" });
+        setDomainError(verify.message || "No se encontró el TXT. Espera la propagación y reintenta.");
+      }
+      const info = await getDomainVerificationInfo(uid, token, domainValue);
+      if (info.success && info.data) setDomainRecord(info.data as any);
+    } catch (error) {
+      toast({ title: "Error", description: "No se pudo verificar el dominio.", variant: "destructive" });
+      setDomainError("No se pudo verificar el dominio.");
+    } finally {
+      setVerifyingDomain(false);
+    }
+  };
+
+  useEffect(() => {
+    if (domainValue && !domainInfoLoaded && !loading) {
+      setDomainInfoLoaded(true);
+      handleShowDomainDns(domainValue);
+    }
+  }, [domainValue, domainInfoLoaded, loading]);
 
   async function onProfileSubmit(data: ProfileFormValues) {
     if (!user) {
@@ -338,16 +413,6 @@ export default function SettingsPage() {
                                 </FormItem>
                             )} />
                             <FormField control={profileForm.control} name="defaultEmailMessage" render={({ field }) => ( <FormItem><FormLabel>Mensaje predefinido para envio</FormLabel><FormControl><Textarea rows={4} {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem> )} />
-                            <FormField control={profileForm.control} name="customDomain" render={({ field }) => (
-                                <FormItem className="md:col-span-2">
-                                    <FormLabel>Dominio Personalizado para Links Públicos</FormLabel>
-                                    <FormControl><Input placeholder="https://tuempresa.com" {...field} value={field.value ?? ''} /></FormControl>
-                                    <p className="text-xs text-muted-foreground">
-                                      Configura tu dominio personalizado para que los links de solicitudes de clientes usen tu marca (ej: https://tuempresa.com/solicitud/abc123)
-                                    </p>
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
                         </div>
                         <Separator/>
                         <div className="space-y-8">
@@ -391,6 +456,153 @@ export default function SettingsPage() {
                             )} />
                         </div>
                     </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="pac">
+                <AccordionTrigger className="text-lg font-semibold bg-muted px-4 rounded-t-lg data-[state=closed]:rounded-b-lg">
+                  PAC / Timbrado
+                </AccordionTrigger>
+                <AccordionContent className="p-4 border border-t-0 rounded-b-lg space-y-6">
+                  <div className="text-sm text-muted-foreground">
+                    Define las credenciales de tu PAC para timbrar con tu propia cuenta. Se guardan por empresa y se usan al momento de timbrar facturas y pagos.
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <FormField control={profileForm.control} name="pacProvider" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Proveedor</FormLabel>
+                        <FormControl><Input placeholder="Ej. FacturaLoPlus, Finkok, SW Sapien" {...field} value={field.value ?? ''} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={profileForm.control} name="pacEnvironment" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Ambiente</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value ?? 'test'}>
+                          <FormControl><SelectTrigger><SelectValue placeholder="Selecciona ambiente" /></SelectTrigger></FormControl>
+                          <SelectContent>
+                            <SelectItem value="test">Pruebas</SelectItem>
+                            <SelectItem value="production">Producción</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={profileForm.control} name="pacUsername" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Usuario</FormLabel>
+                        <FormControl><Input placeholder="Usuario del PAC" {...field} value={field.value ?? ''} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={profileForm.control} name="pacPassword" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Contraseña</FormLabel>
+                        <FormControl><Input type="password" placeholder="Contraseña/Token secreto" {...field} value={field.value ?? ''} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={profileForm.control} name="pacApiKey" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>API Key</FormLabel>
+                        <FormControl><Input placeholder="API Key si aplica" {...field} value={field.value ?? ''} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={profileForm.control} name="pacApiUrl" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>URL del API</FormLabel>
+                        <FormControl><Input placeholder="https://api.tu-pac.com/timbrar" {...field} value={field.value ?? ''} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={profileForm.control} name="pacWebhookUrl" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Webhook (opcional)</FormLabel>
+                        <FormControl><Input placeholder="URL para notificaciones del PAC" {...field} value={field.value ?? ''} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={profileForm.control} name="pacIsActive" render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                        <div className="space-y-0.5">
+                          <FormLabel>Usar este PAC</FormLabel>
+                          <p className="text-xs text-muted-foreground">Activa para timbrar con estas credenciales.</p>
+                        </div>
+                        <FormControl>
+                          <Switch checked={field.value ?? false} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )} />
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="custom-domain">
+                <AccordionTrigger className="text-lg font-semibold bg-muted px-4 rounded-t-lg data-[state=closed]:rounded-b-lg">
+                  Dominio Personalizado (requiere verificación DNS)
+                </AccordionTrigger>
+                <AccordionContent className="p-4 border border-t-0 rounded-b-lg space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Usa un dominio tuempresa.com para los links públicos. Debes apuntar un CNAME/A y verificarlo antes de usarlo; no aceptamos dominios no verificados (ej: google.com).
+                  </p>
+                  <div className="rounded-lg border bg-muted/40 p-3 text-sm">
+                    <div className="text-muted-foreground">Dominio actual:</div>
+                    <div className="font-mono">{profileForm.watch('customDomain') || 'No configurado'}</div>
+                  </div>
+                  {domainRecord && (
+                    <div className="rounded-lg border bg-muted/40 p-3 text-sm space-y-1">
+                      <div className="font-semibold">Registro TXT a crear</div>
+                      <div><span className="text-muted-foreground">Nombre:</span> <span className="font-mono">{domainRecord.recordName}</span></div>
+                      <div><span className="text-muted-foreground">Valor:</span> <span className="font-mono break-all">{domainRecord.token}</span></div>
+                      <div className="text-xs text-muted-foreground">Coloca este TXT en tu DNS y espera propagación.</div>
+                    </div>
+                  )}
+                  <FormField control={profileForm.control} name="customDomain" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Dominio</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="facturas.tuempresa.com"
+                          {...field}
+                          value={field.value ?? ''}
+                          className="max-w-xl"
+                        />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        Puedes escribir solo el dominio; agregamos https:// automáticamente. Configura primero el registro DNS y luego guarda para iniciar verificación.
+                      </p>
+                      {domainError && (
+                        <p className="text-xs text-destructive">{domainError}</p>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <div className="flex flex-wrap gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleShowDomainDns()}
+                      disabled={verifyingDomain || !domainValue}
+                    >
+                      Obtener registro TXT
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleVerifyDomain}
+                      disabled={verifyingDomain || !domainValue}
+                    >
+                      Verificar dominio
+                    </Button>
+                  </div>
+                  <Alert variant="default" className="text-sm">
+                    <AlertTitle>Verificación pendiente</AlertTitle>
+                    <AlertDescription>
+                      Crea el TXT mostrado, espera propagación y luego presiona "Verificar dominio".
+                    </AlertDescription>
+                  </Alert>
                 </AccordionContent>
               </AccordionItem>
 

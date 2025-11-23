@@ -64,7 +64,26 @@ export const profileFormSchema = z.object({
   templateCfdi33: z.string().optional(),
   templateCfdi40: z.string().optional(),
   templateRep: z.string().optional(),
-  customDomain: z.string().url({ message: "Por favor, introduce un dominio válido (ej: https://tuempresa.com)." }).optional().or(z.literal('')),
+  customDomain: z.preprocess((val) => {
+    if (typeof val !== 'string') return val;
+    const trimmed = val.trim();
+    if (!trimmed) return '';
+    // Si no trae protocolo, agregamos https:// para validarlo.
+    if (!/^https?:\/\//i.test(trimmed)) {
+      return `https://${trimmed}`;
+    }
+    return trimmed;
+  }, z.string().url({ message: "Introduce un dominio válido (se agrega https:// automáticamente si falta)." }).optional().or(z.literal(''))),
+
+  // PAC (Proveedor Autorizado de Certificación)
+  pacProvider: z.string().optional().or(z.literal('')),
+  pacEnvironment: z.enum(['test', 'production']).optional().default('test'),
+  pacUsername: z.string().optional().or(z.literal('')),
+  pacPassword: z.string().optional().or(z.literal('')),
+  pacApiKey: z.string().optional().or(z.literal('')),
+  pacApiUrl: z.string().url({ message: "URL del PAC no es válida." }).optional().or(z.literal('')),
+  pacWebhookUrl: z.string().url({ message: "URL del webhook no es válida." }).optional().or(z.literal('')),
+  pacIsActive: z.boolean().optional(),
 
   // Personalización de Colores
   brandPrimaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, { message: "Debe ser un color hexadecimal válido (ej: #5B47DB)" }).optional().or(z.literal('')),

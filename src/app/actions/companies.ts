@@ -10,6 +10,8 @@ import { profileFormSchema, type ProfileFormValues } from "@/lib/schemas";
 import { getRateLimiter } from "@/lib/rate-limiter";
 import { verifyUserRequest } from "@/lib/auth-server";
 import { checkUserPermission } from "@/lib/permissions";
+import { hashData } from "@/lib/encryption";
+import dns from "dns/promises";
 
 export const getCompanyProfile = async (userId: string, idToken: string) => {
   if (!db) {
@@ -33,6 +35,83 @@ export const getCompanyProfile = async (userId: string, idToken: string) => {
     console.error("Database Error (getCompanyProfile):", error);
     const errorMessage = error instanceof Error ? error.message : "Ocurrió un error desconocido.";
     return { success: false, message: `Error al obtener el perfil de la empresa. Verifique la consola del servidor para más detalles: ${errorMessage}` };
+  }
+};
+
+function normalizeDomain(domain: string): string | null {
+  try {
+    const trimmed = domain.trim();
+    if (!trimmed) return null;
+    const urlString = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    const url = new URL(urlString);
+    return url.origin;
+  } catch {
+    return null;
+  }
+}
+
+export const getDomainVerificationInfo = async (userId: string, idToken: string, domainOverride?: string) => {
+  if (!db) {
+    return { success: false, message: "Error de configuración: La conexión con la base de datos no está disponible." };
+  }
+  try {
+    if (!userId) {
+      return { success: false, message: "Usuario no autenticado." };
+    }
+    const verifiedUserId = await verifyUserRequest(userId, idToken);
+    const [company] = await db.select().from(companies).where(eq(companies.userId, verifiedUserId));
+    const domainToUse = domainOverride || company?.customDomain;
+    const normalized = domainToUse ? normalizeDomain(domainToUse) : null;
+    if (!normalized) {
+      return { success: false, message: "Ingresa y guarda un dominio válido antes de verificar." };
+    }
+
+    const url = new URL(normalized);
+    const host = url.hostname;
+    const token = hashData(`${verifiedUserId}:${host}`).slice(0, 32);
+    const recordName = `_origon-verify.${host}`;
+
+    return { success: true, data: { host, token, recordName } };
+  } catch (error) {
+    console.error("Error obteniendo info de dominio:", error);
+    return { success: false, message: "No se pudo generar la instrucción de verificación." };
+  }
+};
+
+export const verifyCustomDomain = async (userId: string, idToken: string) => {
+  if (!db) {
+    return { success: false, message: "Error de configuración: La conexión con la base de datos no está disponible." };
+  }
+  try {
+    if (!userId) {
+      return { success: false, message: "Usuario no autenticado." };
+    }
+    const verifiedUserId = await verifyUserRequest(userId, idToken);
+    const [company] = await db.select().from(companies).where(eq(companies.userId, verifiedUserId));
+    if (!company || !company.customDomain) {
+      return { success: false, message: "No hay dominio personalizado configurado." };
+    }
+
+    const url = new URL(company.customDomain);
+    const host = url.hostname;
+    const token = hashData(`${verifiedUserId}:${host}`).slice(0, 32);
+    const recordName = `_origon-verify.${host}`;
+
+    try {
+      const txtRecords = await dns.resolveTxt(recordName);
+      const flat = txtRecords.flat().map(v => v.trim());
+      if (flat.includes(token)) {
+        return { success: true, message: "Dominio verificado correctamente." };
+      }
+      return { success: false, message: "No se encontró el token en el TXT. Verifica que el registro esté propagado." };
+    } catch (error) {
+      console.error("DNS lookup error:", error);
+      return { success: false, message: "No se pudo resolver el TXT. Verifica el registro DNS y espera la propagación." };
+    }
+  } catch (error) {
+    console.error("Error verificando dominio:", error);
+    const message = error instanceof Error ? error.message : "Error desconocido.";
+    return { success: false, message };
   }
 };
 
