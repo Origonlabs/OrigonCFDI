@@ -1,5 +1,6 @@
 import type {Metadata} from 'next';
 import { Red_Hat_Display } from 'next/font/google';
+import Script from 'next/script';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { ThemeProvider } from '@/components/theme-provider';
@@ -34,6 +35,12 @@ export default function RootLayout({
           {children}
           <Toaster />
         </ThemeProvider>
+
+        {/* Tidio Chat Widget */}
+        <Script
+          src="//code.tidio.co/opcrppzdnebxmjjw8zykuqjwjenjmsfn.js"
+          strategy="lazyOnload"
+        />
       </body>
     </html>
   );
