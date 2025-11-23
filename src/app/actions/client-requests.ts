@@ -83,10 +83,11 @@ export async function createClientRequest(
 
 /**
  * Obtiene una solicitud por token (para el formulario público)
+ * También incluye la personalización de la compañía (logo, colores, mensajes)
  */
 export async function getClientRequestByToken(
   token: string
-): Promise<{ success: boolean; request?: any; message?: string }> {
+): Promise<{ success: boolean; request?: any; branding?: any; message?: string }> {
   if (!db) {
     return { success: false, message: "Error de configuración: La conexión con la base de datos no está disponible." };
   }
@@ -112,7 +113,39 @@ export async function getClientRequestByToken(
       return { success: false, message: "Esta solicitud ya fue completada." };
     }
 
-    return { success: true, request };
+    // Obtener personalización de la compañía del usuario que creó la solicitud
+    const [company] = await db
+      .select({
+        logoUrl: companies.logoUrl,
+        companyName: companies.companyName,
+        brandPrimaryColor: companies.brandPrimaryColor,
+        brandSecondaryColor: companies.brandSecondaryColor,
+        brandAccentColor: companies.brandAccentColor,
+        brandTextColor: companies.brandTextColor,
+        brandBackgroundColor: companies.brandBackgroundColor,
+        formWelcomeMessage: companies.formWelcomeMessage,
+        formFooterMessage: companies.formFooterMessage,
+      })
+      .from(companies)
+      .where(eq(companies.userId, request.userId))
+      .limit(1);
+
+    return {
+      success: true,
+      request,
+      branding: company || {
+        // Valores por defecto si no hay personalización
+        logoUrl: null,
+        companyName: null,
+        brandPrimaryColor: '#5B47DB',
+        brandSecondaryColor: '#E8E5FA',
+        brandAccentColor: '#B19EEF',
+        brandTextColor: '#1F2937',
+        brandBackgroundColor: '#F1F1F1',
+        formWelcomeMessage: null,
+        formFooterMessage: null,
+      },
+    };
   } catch (error) {
     console.error("Database Error (getClientRequestByToken):", error);
     const errorMessage = error instanceof Error ? error.message : "Ocurrió un error desconocido.";

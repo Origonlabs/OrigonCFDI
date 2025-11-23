@@ -1,9 +1,9 @@
 import type {Metadata} from 'next';
 import { Red_Hat_Display } from 'next/font/google';
-import Script from 'next/script';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { ThemeProvider } from '@/components/theme-provider';
+import TidioChat from '@/components/tidio-chat';
 
 const redHatDisplay = Red_Hat_Display({
   subsets: ['latin'],
@@ -36,11 +36,7 @@ export default function RootLayout({
           <Toaster />
         </ThemeProvider>
 
-        {/* Tidio Chat Widget */}
-        <Script
-          src="//code.tidio.co/opcrppzdnebxmjjw8zykuqjwjenjmsfn.js"
-          strategy="lazyOnload"
-        />
+        <TidioChat />
       </body>
     </html>
   );

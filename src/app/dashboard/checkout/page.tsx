@@ -12,11 +12,11 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeftRegular, CreditCardRegular, WalletRegular, BuildingBankRegular, CheckmarkCircleFilled, CheckmarkCircleRegular, InfoRegular, ChevronDownRegular, ReceiptRegular } from "@/icons/fluent";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SkeletonImage } from "@/components/ui/skeleton-image";
 
 const plans = {
     'Básico': { price: '99.00', currency: 'MXN' },
@@ -135,9 +135,9 @@ export default function CheckoutPage() {
                                     <RadioGroupItem value="card" id="card" />
                                     <Label htmlFor="card" className="flex-1 cursor-pointer">Tarjeta de crédito</Label>
                                     <div className="flex items-center gap-1">
-                                        <Image src="https://img.buoucoding.com/visa.svg" alt="Visa" width={32} height={20} />
-                                        <Image src="https://img.buoucoding.com/mastercard.svg" alt="Mastercard" width={32} height={20} />
-                                        <Image src="https://img.buoucoding.com/amex.svg" alt="American Express" width={32} height={20} />
+                                        <SkeletonImage src="https://img.buoucoding.com/visa.svg" alt="Visa" width={32} height={20} />
+                                        <SkeletonImage src="https://img.buoucoding.com/mastercard.svg" alt="Mastercard" width={32} height={20} />
+                                        <SkeletonImage src="https://img.buoucoding.com/amex.svg" alt="American Express" width={32} height={20} />
                                     </div>
                                 </div>
                                 {selectedPaymentMethod === "card" && (

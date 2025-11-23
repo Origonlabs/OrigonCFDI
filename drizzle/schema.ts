@@ -118,6 +118,27 @@ export const companies = pgTable('companies', {
     templateCfdi40: varchar('template_cfdi_40', { length: 50 }),
     templateRep: varchar('template_rep', { length: 50 }),
     customDomain: varchar('custom_domain', { length: 256 }), // Dominio personalizado para links públicos
+
+    // Personalización de Colores para Formularios de Clientes
+    brandPrimaryColor: varchar('brand_primary_color', { length: 7 }).default('#5B47DB'), // Color primario de la marca (hex)
+    brandSecondaryColor: varchar('brand_secondary_color', { length: 7 }).default('#E8E5FA'), // Color secundario (hex)
+    brandAccentColor: varchar('brand_accent_color', { length: 7 }).default('#B19EEF'), // Color de acento para PixelBlast (hex)
+    brandTextColor: varchar('brand_text_color', { length: 7 }).default('#1F2937'), // Color de texto principal (hex)
+    brandBackgroundColor: varchar('brand_background_color', { length: 7 }).default('#F1F1F1'), // Color de fondo (hex)
+    formWelcomeMessage: text('form_welcome_message'), // Mensaje de bienvenida personalizado en formularios
+    formFooterMessage: text('form_footer_message'), // Mensaje en pie de página de formularios
+
+    // Configuración de PAC (Proveedor Autorizado de Certificación)
+    pacProvider: varchar('pac_provider', { length: 50 }), // Nombre del PAC (Finkok, SW Sapien, Efactura, etc)
+    pacEnvironment: varchar('pac_environment', { length: 20 }).default('test'), // 'test' o 'production'
+    pacUsername: varchar('pac_username', { length: 256 }), // Usuario del PAC
+    pacPassword: text('pac_password'), // Contraseña del PAC (encriptada)
+    pacApiKey: text('pac_api_key'), // API Key del PAC (si aplica)
+    pacApiUrl: varchar('pac_api_url', { length: 512 }), // URL del API del PAC
+    pacWebhookUrl: varchar('pac_webhook_url', { length: 512 }), // URL para recibir webhooks del PAC
+    pacIsActive: boolean('pac_is_active').default(false), // Si la conexión PAC está activa
+    pacLastTest: timestamp('pac_last_test'), // Última vez que se probó la conexión
+    pacLastError: text('pac_last_error'), // Último error de conexión (si hubo)
 });
 
 export const certificateStatusEnum = pgEnum('certificate_status', ['active', 'revoked', 'expired']);

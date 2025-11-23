@@ -65,6 +65,15 @@ export const profileFormSchema = z.object({
   templateCfdi40: z.string().optional(),
   templateRep: z.string().optional(),
   customDomain: z.string().url({ message: "Por favor, introduce un dominio válido (ej: https://tuempresa.com)." }).optional().or(z.literal('')),
+
+  // Personalización de Colores
+  brandPrimaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, { message: "Debe ser un color hexadecimal válido (ej: #5B47DB)" }).optional().or(z.literal('')),
+  brandSecondaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, { message: "Debe ser un color hexadecimal válido (ej: #E8E5FA)" }).optional().or(z.literal('')),
+  brandAccentColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, { message: "Debe ser un color hexadecimal válido (ej: #B19EEF)" }).optional().or(z.literal('')),
+  brandTextColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, { message: "Debe ser un color hexadecimal válido (ej: #1F2937)" }).optional().or(z.literal('')),
+  brandBackgroundColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, { message: "Debe ser un color hexadecimal válido (ej: #F1F1F1)" }).optional().or(z.literal('')),
+  formWelcomeMessage: z.string().optional(),
+  formFooterMessage: z.string().optional(),
 });
 export type ProfileFormValues = z.infer<typeof profileFormSchema>;
 

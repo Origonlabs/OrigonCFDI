@@ -5,7 +5,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useEffect, useState, useCallback } from "react";
-import Image from "next/image";
 import { onAuthStateChanged, User, updateProfile, reauthenticateWithCredential, EmailAuthProvider, updatePassword, deleteUser } from "firebase/auth";
 import { CheckmarkCircleRegular, DismissCircleRegular, WarningRegular } from "@/icons/fluent";
 
@@ -30,6 +29,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { SkeletonImage } from "@/components/ui/skeleton-image";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -359,13 +359,13 @@ export default function SettingsPage() {
                                           <Label htmlFor="t40-1" className="flex flex-col items-center gap-2 cursor-pointer">
                                               <div className="border rounded-md p-2 has-[:checked]:border-primary has-[:checked]:ring-2 has-[:checked]:ring-primary">
                                                   <RadioGroupItem value="costine-40" id="t40-1" className="sr-only"/>
-                                                  <Image src="https://placehold.co/200x283.png" alt="Plantilla 1" width={200} height={283} data-ai-hint="invoice template" />
+                                                  <SkeletonImage src="https://placehold.co/200x283.png" alt="Plantilla 1" width={200} height={283} data-ai-hint="invoice template" />
                                               </div>
                                           </Label>
                                           <Label htmlFor="t40-2" className="flex flex-col items-center gap-2 cursor-pointer">
                                                <div className="border rounded-md p-2 has-[:checked]:border-primary has-[:checked]:ring-2 has-[:checked]:ring-primary">
                                                   <RadioGroupItem value="elegant-40" id="t40-2" className="sr-only"/>
-                                                  <Image src="https://placehold.co/200x283.png" alt="Plantilla 2" width={200} height={283} data-ai-hint="invoice template" />
+                                                  <SkeletonImage src="https://placehold.co/200x283.png" alt="Plantilla 2" width={200} height={283} data-ai-hint="invoice template" />
                                               </div>
                                           </Label>
                                       </RadioGroup>
@@ -381,7 +381,7 @@ export default function SettingsPage() {
                                           <Label htmlFor="trep-1" className="flex flex-col items-center gap-2 cursor-pointer">
                                               <div className="border rounded-md p-2 has-[:checked]:border-primary has-[:checked]:ring-2 has-[:checked]:ring-primary">
                                                   <RadioGroupItem value="costine-rep" id="trep-1" className="sr-only" />
-                                                  <Image src="https://placehold.co/200x283.png" alt="Plantilla REP" width={200} height={283} data-ai-hint="invoice template" />
+                                                  <SkeletonImage src="https://placehold.co/200x283.png" alt="Plantilla REP" width={200} height={283} data-ai-hint="invoice template" />
                                               </div>
                                           </Label>
                                       </RadioGroup>
