@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CheckmarkCircleRegular, ErrorCircleRegular } from '@/icons/fluent';
+import { PixelBlast } from '@/components/ui/pixel-blast';
 
 export default function ClientFormPage() {
   const params = useParams();
@@ -97,6 +98,7 @@ export default function ClientFormPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+        <PixelBlast />
         <Card className="w-full max-w-2xl mx-4">
           <CardContent className="pt-6">
             <div className="text-center">Cargando...</div>
@@ -109,6 +111,7 @@ export default function ClientFormPage() {
   if (error && !request) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+        <PixelBlast />
         <Card className="w-full max-w-2xl mx-4">
           <CardHeader>
             <div className="flex items-center gap-2 text-red-600">
@@ -125,6 +128,7 @@ export default function ClientFormPage() {
   if (success) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+        <PixelBlast />
         <Card className="w-full max-w-2xl mx-4">
           <CardHeader>
             <div className="flex items-center gap-2 text-green-600">
@@ -142,6 +146,7 @@ export default function ClientFormPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 py-12">
+      <PixelBlast />
       <div className="container mx-auto px-4 max-w-3xl">
         <Card>
           <CardHeader>
