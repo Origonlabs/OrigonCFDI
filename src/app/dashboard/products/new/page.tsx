@@ -24,6 +24,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
+import { ProductImageUpload } from "@/components/product-image-upload";
 
 export default function NewProductPage() {
     const { toast } = useToast();
@@ -39,6 +40,7 @@ export default function NewProductPage() {
             description: "",
             unitPrice: 0,
             satKey: "",
+            imageUrl: "",
         },
     });
 
@@ -125,12 +127,20 @@ export default function NewProductPage() {
                                 </FormItem>
                             )} />
                              <FormField control={form.control} name="unitPrice" render={({ field }) => ( <FormItem><FormLabel>Precio Unitario</FormLabel><FormControl><Input type="number" placeholder="0.00" step="0.01" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                             <FormField control={form.control} name="description" render={({ field }) => ( 
+                             <FormField control={form.control} name="description" render={({ field }) => (
                                 <FormItem className="md:col-span-2">
                                   <FormLabel>* Descripción</FormLabel>
                                   <FormControl><Textarea placeholder="Descripción detallada del producto o servicio" {...field} /></FormControl>
                                   <FormMessage />
-                                </FormItem> 
+                                </FormItem>
+                              )} />
+                             <FormField control={form.control} name="imageUrl" render={({ field }) => (
+                                <FormItem className="md:col-span-2">
+                                  <FormControl>
+                                    <ProductImageUpload value={field.value} onChange={field.onChange} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
                               )} />
                         </div>
                     </CardContent>

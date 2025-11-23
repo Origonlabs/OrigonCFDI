@@ -4,7 +4,7 @@
   "private": true,
   "author": "Opendex Cloud Platform <agrufino@opendex.dev>",
   "scripts": {
-    "dev": "next dev -p 3000",
+    "dev": "next dev -p 3000 --turbopack",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",

@@ -84,6 +84,8 @@ export const AlertCircleRegular = pick('AlertCircle');
 export const CircleRegular = pick('Circle');
 export const WeatherSunnyRegular = pick('WeatherSunny');
 export const WeatherMoonRegular = pick('WeatherMoon');
+export const ImageRegular = pick('Image');
+export const LinkRegular = pick('Link');
 
 export default {} as any;
 

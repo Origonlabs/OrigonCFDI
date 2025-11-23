@@ -4,6 +4,7 @@ import db from '@/lib/db';
 import { users } from '../../../drizzle/schema';
 import { eq } from 'drizzle-orm';
 import type { UserRole } from '@/lib/roles';
+import { generateTenantId } from '@/lib/utils';
 
 /**
  * Obtiene el rol de un usuario
@@ -31,10 +32,35 @@ export async function getUserRole(userId: string, email?: string): Promise<{ suc
       console.log(`Usuario ${userId} no encontrado en BD, creando con rol 'company'...`);
 
       try {
+        // Generar un tenantId único, reintentando si ya existe
+        let tenantId = generateTenantId();
+        let attempts = 0;
+        const maxAttempts = 10;
+
+        while (attempts < maxAttempts) {
+          const [existingTenant] = await db
+            .select({ id: users.id })
+            .from(users)
+            .where(eq(users.tenantId, tenantId))
+            .limit(1);
+
+          if (!existingTenant) {
+            break; // tenantId es único, salir del loop
+          }
+
+          tenantId = generateTenantId(); // Generar nuevo ID
+          attempts++;
+        }
+
+        if (attempts >= maxAttempts) {
+          throw new Error('No se pudo generar un Tenant ID único después de varios intentos.');
+        }
+
         await db.insert(users).values({
           userId,
           email: email || `${userId}@temp.local`, // Email temporal si no se proporciona
           role: 'company',
+          tenantId, // Asignar nuevo tenant ID único de 18 caracteres
         });
         return { success: true, role: 'company' };
       } catch (insertError) {
@@ -69,10 +95,40 @@ export async function createUser(userId: string, email: string, role: UserRole =
   }
 
   try {
+    // Solo generar tenantId si es una cuenta 'company' (dueño de organización)
+    let tenantId: string | undefined = undefined;
+
+    if (role === 'company') {
+      // Generar un tenantId único, reintentando si ya existe
+      tenantId = generateTenantId();
+      let attempts = 0;
+      const maxAttempts = 10;
+
+      while (attempts < maxAttempts) {
+        const [existingTenant] = await db
+          .select({ id: users.id })
+          .from(users)
+          .where(eq(users.tenantId, tenantId))
+          .limit(1);
+
+        if (!existingTenant) {
+          break; // tenantId es único, salir del loop
+        }
+
+        tenantId = generateTenantId(); // Generar nuevo ID
+        attempts++;
+      }
+
+      if (attempts >= maxAttempts) {
+        return { success: false, message: 'No se pudo generar un Tenant ID único después de varios intentos.' };
+      }
+    }
+
     await db.insert(users).values({
       userId,
       email,
       role,
+      tenantId,
     });
 
     return { success: true };

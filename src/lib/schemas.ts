@@ -64,6 +64,7 @@ export const profileFormSchema = z.object({
   templateCfdi33: z.string().optional(),
   templateCfdi40: z.string().optional(),
   templateRep: z.string().optional(),
+  customDomain: z.string().url({ message: "Por favor, introduce un dominio válido (ej: https://tuempresa.com)." }).optional().or(z.literal('')),
 });
 export type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
@@ -186,6 +187,7 @@ export const productSchema = z.object({
   description: z.string().min(1, { message: "La descripción es obligatoria." }),
   unitPrice: z.coerce.number().min(0, { message: "El precio unitario no puede ser negativo." }),
   satKey: z.string().min(1, { message: "La clave de producto es obligatoria." }),
+  imageUrl: z.string().url({ message: "La URL de la imagen no es válida." }).optional().or(z.literal('')),
 });
 export type ProductFormValues = z.infer<typeof productSchema>;
 

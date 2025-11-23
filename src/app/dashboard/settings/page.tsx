@@ -338,6 +338,16 @@ export default function SettingsPage() {
                                 </FormItem>
                             )} />
                             <FormField control={profileForm.control} name="defaultEmailMessage" render={({ field }) => ( <FormItem><FormLabel>Mensaje predefinido para envio</FormLabel><FormControl><Textarea rows={4} {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem> )} />
+                            <FormField control={profileForm.control} name="customDomain" render={({ field }) => (
+                                <FormItem className="md:col-span-2">
+                                    <FormLabel>Dominio Personalizado para Links Públicos</FormLabel>
+                                    <FormControl><Input placeholder="https://tuempresa.com" {...field} value={field.value ?? ''} /></FormControl>
+                                    <p className="text-xs text-muted-foreground">
+                                      Configura tu dominio personalizado para que los links de solicitudes de clientes usen tu marca (ej: https://tuempresa.com/solicitud/abc123)
+                                    </p>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
                         </div>
                         <Separator/>
                         <div className="space-y-8">

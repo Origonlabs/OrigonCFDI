@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { AddCircleRegular, MoreHorizontalRegular, FilterRegular } from "@/icons/fluent";
+import { AddCircleRegular, MoreHorizontalRegular, FilterRegular, ImageRegular } from "@/icons/fluent";
 import { User } from "firebase/auth";
 
 import { auth, firebaseEnabled } from "@/lib/firebase/client";
@@ -139,6 +139,7 @@ export default function ProductsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Imagen</TableHead>
                   <TableHead>Código</TableHead>
                   <TableHead>Unidad</TableHead>
                   <TableHead>Descripción</TableHead>
@@ -155,12 +156,25 @@ export default function ProductsPage() {
                 {loading ? (
                   Array.from({ length: 5 }).map((_, index) => (
                     <TableRow key={index}>
-                      <TableCell colSpan={8}><Skeleton className="h-5 w-full" /></TableCell>
+                      <TableCell colSpan={9}><Skeleton className="h-5 w-full" /></TableCell>
                     </TableRow>
                   ))
                 ) : products.length > 0 ? (
                   products.map((product) => (
                     <TableRow key={product.id}>
+                      <TableCell>
+                        <div className="w-12 h-12 rounded-lg overflow-hidden border bg-muted flex items-center justify-center">
+                          {product.imageUrl ? (
+                            <img
+                              src={product.imageUrl}
+                              alt={product.description}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <ImageRegular className="h-6 w-6 text-muted-foreground" />
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell>{product.code || 'N/A'}</TableCell>
                       <TableCell>{product.unitKey}</TableCell>
                       <TableCell className="font-medium">{product.description}</TableCell>
@@ -189,7 +203,7 @@ export default function ProductsPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center h-24">
+                    <TableCell colSpan={9} className="text-center h-24">
                       No has agregado ningún producto o servicio.
                     </TableCell>
                   </TableRow>

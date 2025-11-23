@@ -10,12 +10,34 @@ export const users = pgTable('users', {
   userId: varchar('user_id', { length: 256 }).notNull().unique(), // Firebase UID
   email: varchar('email', { length: 256 }).notNull().unique(),
   role: userRoleEnum('role').default('company').notNull(),
-  // Multi-tenant: ownerId vincula usuarios secundarios a la empresa principal
+  // Multi-tenant: tenantId identifica la organización (18 caracteres alfanuméricos)
+  // null = usuario sin organización (admin)
+  // valor = ID único de la organización a la que pertenece
+  tenantId: varchar('tenant_id', { length: 18 }).unique(),
+  // ownerId vincula usuarios secundarios a la cuenta principal de la empresa
   // null = es una cuenta principal (company owner)
-  // valor = es un usuario creado por esa empresa (accountant, client)
+  // valor = userId del owner que creó este usuario (accountant, client)
   ownerId: varchar('owner_id', { length: 256 }),
   displayName: varchar('display_name', { length: 256 }),
   isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// --- Solicitudes de Datos de Clientes ---
+export const clientRequestStatusEnum = pgEnum('client_request_status', ['pending', 'completed', 'expired']);
+
+export const clientRequests = pgTable('client_requests', {
+  id: serial('id').primaryKey(),
+  userId: varchar('user_id', { length: 256 }).notNull(), // Vendedor/Company que solicita
+  tenantId: varchar('tenant_id', { length: 18 }), // Organización del solicitante
+  token: varchar('token', { length: 64 }).notNull().unique(), // Token único para el link
+  clientEmail: varchar('client_email', { length: 256 }), // Email del cliente (opcional)
+  status: clientRequestStatusEnum('status').default('pending').notNull(),
+  // Datos recibidos del cliente (JSON)
+  clientData: text('client_data'), // JSON con todos los datos del formulario
+  expiresAt: timestamp('expires_at').notNull(), // Link expira después de X días
+  completedAt: timestamp('completed_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -40,7 +62,7 @@ export const clients = pgTable('clients', {
   street: text('street'),
   exteriorNumber: varchar('exterior_number', { length: 50 }),
   interiorNumber: varchar('interior_number', { length: 50 }),
-  
+
   // Contacto y Preferencias
   phone: varchar('phone', { length: 20 }),
   paymentMethod: varchar('payment_method', { length: 3 }),
@@ -95,6 +117,7 @@ export const companies = pgTable('companies', {
     templateCfdi33: varchar('template_cfdi_33', { length: 50 }),
     templateCfdi40: varchar('template_cfdi_40', { length: 50 }),
     templateRep: varchar('template_rep', { length: 50 }),
+    customDomain: varchar('custom_domain', { length: 256 }), // Dominio personalizado para links públicos
 });
 
 export const certificateStatusEnum = pgEnum('certificate_status', ['active', 'revoked', 'expired']);
@@ -124,6 +147,7 @@ export const products = pgTable('products', {
   unitKey: varchar('unit_key', { length: 3 }).notNull(),
   unitPrice: numeric('unit_price', { precision: 10, scale: 2 }).notNull(),
   objetoImpuesto: varchar('objeto_impuesto', { length: 2 }).notNull(),
+  imageUrl: varchar('image_url', { length: 512 }), // URL de la imagen del producto
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 

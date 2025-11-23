@@ -6,6 +6,7 @@ import { AddCircleRegular, MoreHorizontalRegular, FilterRegular } from "@/icons/
 import { User } from "firebase/auth";
 import Link from "next/link";
 import { ClientForm } from "@/components/client-form";
+import { ClientRequestDialog } from "@/components/client-request-dialog";
 
 import { auth, firebaseEnabled } from "@/lib/firebase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -142,6 +143,7 @@ export default function ClientsPage() {
                         Agregar más clientes
                     </Link>
                 </Button>
+                {user && <ClientRequestDialog user={user} />}
                 <Input placeholder="RFC" className="w-40" />
                 <Input placeholder="Razón Social" className="w-64" />
                 <Input placeholder="Referencia" className="w-40" />

@@ -2,16 +2,14 @@
 
 import db from '@/lib/db';
 import { users } from '../../../../drizzle/schema';
-import { eq, or, isNull, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { verifyUserRequest } from '@/lib/auth-server';
-import { checkUserPermission } from '@/lib/permissions';
 import type { UserRole } from '@/lib/roles';
-import { getUserRole } from '@/app/actions/users';
 
 /**
  * Obtiene los usuarios de una empresa (multi-tenant)
  * - Admin: ve todos los usuarios
- * - Company: ve solo sus usuarios creados (ownerId = su userId)
+ * - Company: ve solo los usuarios de su organización (mismo tenantId)
  */
 export async function getCompanyUsers(userId: string, idToken: string) {
   if (!db) {
@@ -21,15 +19,20 @@ export async function getCompanyUsers(userId: string, idToken: string) {
   try {
     await verifyUserRequest(userId, idToken);
 
-    // Obtener rol del usuario actual
-    const roleResult = await getUserRole(userId);
-    if (!roleResult.success) {
-      return { success: false, message: roleResult.message };
+    // Obtener rol y tenantId del usuario actual
+    const [currentUser] = await db
+      .select({ role: users.role, tenantId: users.tenantId })
+      .from(users)
+      .where(eq(users.userId, userId))
+      .limit(1);
+
+    if (!currentUser) {
+      return { success: false, message: "Usuario no encontrado." };
     }
 
     let query;
 
-    if (roleResult.role === 'admin') {
+    if (currentUser.role === 'admin') {
       // Admin ve todos los usuarios
       query = db
         .select({
@@ -38,14 +41,19 @@ export async function getCompanyUsers(userId: string, idToken: string) {
           email: users.email,
           role: users.role,
           displayName: users.displayName,
+          tenantId: users.tenantId,
           ownerId: users.ownerId,
           isActive: users.isActive,
           createdAt: users.createdAt,
         })
         .from(users)
         .orderBy(users.createdAt);
-    } else if (roleResult.role === 'company') {
-      // Company ve solo sus usuarios (los que creó + él mismo)
+    } else if (currentUser.role === 'company') {
+      // Company ve solo usuarios de su organización (mismo tenantId)
+      if (!currentUser.tenantId) {
+        return { success: false, message: "No tienes una organización asignada." };
+      }
+
       query = db
         .select({
           id: users.id,
@@ -53,15 +61,13 @@ export async function getCompanyUsers(userId: string, idToken: string) {
           email: users.email,
           role: users.role,
           displayName: users.displayName,
+          tenantId: users.tenantId,
           ownerId: users.ownerId,
           isActive: users.isActive,
           createdAt: users.createdAt,
         })
         .from(users)
-        .where(or(
-          eq(users.userId, userId), // El usuario actual
-          eq(users.ownerId, userId)  // Usuarios que él creó
-        ))
+        .where(eq(users.tenantId, currentUser.tenantId))
         .orderBy(users.createdAt);
     } else {
       return { success: false, message: "No tienes permisos para gestionar usuarios." };
@@ -101,20 +107,30 @@ export async function createCompanyUser(
   try {
     await verifyUserRequest(ownerId, idToken);
 
-    // Obtener rol del usuario actual
-    const roleResult = await getUserRole(ownerId);
-    if (!roleResult.success) {
-      return { success: false, message: roleResult.message };
+    // Obtener rol y tenantId del usuario actual
+    const [currentUser] = await db
+      .select({ role: users.role, tenantId: users.tenantId })
+      .from(users)
+      .where(eq(users.userId, ownerId))
+      .limit(1);
+
+    if (!currentUser) {
+      return { success: false, message: "Usuario no encontrado." };
     }
 
     // Solo admin y company pueden crear usuarios
-    if (roleResult.role !== 'admin' && roleResult.role !== 'company') {
+    if (currentUser.role !== 'admin' && currentUser.role !== 'company') {
       return { success: false, message: "No tienes permisos para crear usuarios." };
     }
 
     // Company solo puede crear accountant y client, no admin ni company
-    if (roleResult.role === 'company' && (role === 'admin' || role === 'company')) {
+    if (currentUser.role === 'company' && (role === 'admin' || role === 'company')) {
       return { success: false, message: "Solo puedes crear usuarios con rol Contador o Cliente." };
+    }
+
+    // Company debe tener un tenantId
+    if (currentUser.role === 'company' && !currentUser.tenantId) {
+      return { success: false, message: "No tienes una organización asignada." };
     }
 
     // Verificar que el email no exista
@@ -136,7 +152,8 @@ export async function createCompanyUser(
       email,
       displayName,
       role,
-      ownerId: roleResult.role === 'admin' ? null : ownerId, // Admin crea usuarios sin owner
+      ownerId: currentUser.role === 'admin' ? null : ownerId, // Admin crea usuarios sin owner
+      tenantId: currentUser.tenantId, // Heredar el tenantId de la organización
       isActive: true,
     });
 
@@ -164,32 +181,37 @@ export async function updateUserRole(
   try {
     await verifyUserRequest(requesterId, idToken);
 
-    // Obtener rol del usuario actual
-    const roleResult = await getUserRole(requesterId);
-    if (!roleResult.success) {
-      return { success: false, message: roleResult.message };
+    // Obtener rol y tenantId del usuario actual
+    const [currentUser] = await db
+      .select({ role: users.role, tenantId: users.tenantId })
+      .from(users)
+      .where(eq(users.userId, requesterId))
+      .limit(1);
+
+    if (!currentUser) {
+      return { success: false, message: "Usuario no encontrado." };
     }
 
     // Obtener el usuario objetivo
     const [targetUser] = await db
-      .select({ ownerId: users.ownerId, role: users.role })
+      .select({ tenantId: users.tenantId, role: users.role })
       .from(users)
       .where(eq(users.userId, targetUserId))
       .limit(1);
 
     if (!targetUser) {
-      return { success: false, message: "Usuario no encontrado." };
+      return { success: false, message: "Usuario objetivo no encontrado." };
     }
 
     // Verificar permisos
-    if (roleResult.role === 'admin') {
+    if (currentUser.role === 'admin') {
       // Admin puede cambiar cualquier rol excepto quitarse su propio admin
       if (requesterId === targetUserId && newRole !== 'admin') {
         return { success: false, message: "No puedes quitarte tu propio rol de administrador." };
       }
-    } else if (roleResult.role === 'company') {
-      // Company solo puede modificar usuarios que le pertenecen
-      if (targetUser.ownerId !== requesterId) {
+    } else if (currentUser.role === 'company') {
+      // Company solo puede modificar usuarios de su misma organización
+      if (targetUser.tenantId !== currentUser.tenantId) {
         return { success: false, message: "No tienes permisos para modificar este usuario." };
       }
       // Company no puede asignar roles admin o company
@@ -235,28 +257,34 @@ export async function toggleUserActive(
   try {
     await verifyUserRequest(requesterId, idToken);
 
-    const roleResult = await getUserRole(requesterId);
-    if (!roleResult.success) {
-      return { success: false, message: roleResult.message };
+    // Obtener rol y tenantId del usuario actual
+    const [currentUser] = await db
+      .select({ role: users.role, tenantId: users.tenantId })
+      .from(users)
+      .where(eq(users.userId, requesterId))
+      .limit(1);
+
+    if (!currentUser) {
+      return { success: false, message: "Usuario no encontrado." };
     }
 
     // Obtener el usuario objetivo
     const [targetUser] = await db
-      .select({ ownerId: users.ownerId })
+      .select({ tenantId: users.tenantId })
       .from(users)
       .where(eq(users.userId, targetUserId))
       .limit(1);
 
     if (!targetUser) {
-      return { success: false, message: "Usuario no encontrado." };
+      return { success: false, message: "Usuario objetivo no encontrado." };
     }
 
     // Verificar permisos
-    if (roleResult.role === 'company' && targetUser.ownerId !== requesterId) {
+    if (currentUser.role === 'company' && targetUser.tenantId !== currentUser.tenantId) {
       return { success: false, message: "No tienes permisos para modificar este usuario." };
     }
 
-    if (roleResult.role !== 'admin' && roleResult.role !== 'company') {
+    if (currentUser.role !== 'admin' && currentUser.role !== 'company') {
       return { success: false, message: "No tienes permisos para modificar usuarios." };
     }
 
@@ -279,7 +307,7 @@ export async function toggleUserActive(
 }
 
 /**
- * Elimina un usuario (solo si es de la empresa)
+ * Elimina un usuario (solo si es de la misma organización)
  */
 export async function deleteCompanyUser(
   requesterId: string,
@@ -293,20 +321,26 @@ export async function deleteCompanyUser(
   try {
     await verifyUserRequest(requesterId, idToken);
 
-    const roleResult = await getUserRole(requesterId);
-    if (!roleResult.success) {
-      return { success: false, message: roleResult.message };
+    // Obtener rol y tenantId del usuario actual
+    const [currentUser] = await db
+      .select({ role: users.role, tenantId: users.tenantId })
+      .from(users)
+      .where(eq(users.userId, requesterId))
+      .limit(1);
+
+    if (!currentUser) {
+      return { success: false, message: "Usuario no encontrado." };
     }
 
     // Obtener el usuario objetivo
     const [targetUser] = await db
-      .select({ ownerId: users.ownerId, userId: users.userId })
+      .select({ tenantId: users.tenantId, userId: users.userId })
       .from(users)
       .where(eq(users.userId, targetUserId))
       .limit(1);
 
     if (!targetUser) {
-      return { success: false, message: "Usuario no encontrado." };
+      return { success: false, message: "Usuario objetivo no encontrado." };
     }
 
     // No permitir eliminarse a sí mismo
@@ -315,11 +349,11 @@ export async function deleteCompanyUser(
     }
 
     // Verificar permisos
-    if (roleResult.role === 'company' && targetUser.ownerId !== requesterId) {
+    if (currentUser.role === 'company' && targetUser.tenantId !== currentUser.tenantId) {
       return { success: false, message: "No tienes permisos para eliminar este usuario." };
     }
 
-    if (roleResult.role !== 'admin' && roleResult.role !== 'company') {
+    if (currentUser.role !== 'admin' && currentUser.role !== 'company') {
       return { success: false, message: "No tienes permisos para eliminar usuarios." };
     }
 
