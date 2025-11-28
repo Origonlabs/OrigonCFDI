@@ -1,1 +1,13 @@
-{"version":"7","dialect":"postgresql","entries":[]}
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1764371073633,
+      "tag": "0000_cynical_typhoid_mary",
+      "breakpoints": true
+    }
+  ]
+}

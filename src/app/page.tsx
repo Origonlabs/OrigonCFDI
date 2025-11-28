@@ -44,10 +44,11 @@ export default function LoginPage() {
           </p>
           <div className="mt-8 text-muted-foreground/60">
             <p>Developed by <span className="font-semibold text-foreground">Opendex Cloud Platform</span></p>
-            <p className="text-[10px] mt-1">© {new Date().getFullYear()} Opendex, Inc. All rights reserved.</p>
+            <p className="text-[10px] mt-1">© {new Date().getFullYear()} Opendex Cloud Platform. o sus empresas afiliadas. Todos los derechos reservados..</p>
           </div>
         </div>
-      </motion.div>
+      </motion.div> tus datos de pago o añade otra forma de pago en la página Facturación.
+Para obtener instrucciones, co
     </div>
   )
 }

@@ -260,7 +260,12 @@ export const signupSchema = z.object({
     .max(13, "El RFC debe tener 12 o 13 caracteres.")
     .regex(/^[A-Z&Ñ]{3,4}\d{6}(?:[A-Z\d]{3})?$/, { message: "El formato del RFC no es válido." }),
   // Campos opcionales para registro con correo (no OAuth)
-  password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres.").optional().or(z.literal("")),
+  password: z.string()
+    .min(8, "La contraseña debe tener al menos 8 caracteres.")
+    .regex(/[A-Z]/, "Debe contener al menos una mayúscula.")
+    .regex(/[a-z]/, "Debe contener al menos una minúscula.")
+    .regex(/[0-9]/, "Debe contener al menos un número.")
+    .optional().or(z.literal("")),
   confirmPassword: z.string().optional().or(z.literal("")),
   // Campos de certificado opcionales (se pueden agregar después)
   passwordCertificado: z.string().optional().or(z.literal("")),

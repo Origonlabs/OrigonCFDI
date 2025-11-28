@@ -79,7 +79,7 @@ export default function SignupPage() {
 
       if (roleResult.success && roleResult.role) {
         // Usuario ya existe, redirigir al dashboard
-        toast({ title: "Bienvenido de nuevo", description: "Ya tienes una cuenta registrada." });
+        toast({ variant: "success", title: "Bienvenido de nuevo", description: "Ya tienes una cuenta registrada." });
         router.push('/dashboard');
         return;
       }
@@ -128,7 +128,7 @@ export default function SignupPage() {
 
       if (roleResult.success && roleResult.role) {
         // Usuario ya existe, redirigir al dashboard
-        toast({ title: "Bienvenido de nuevo", description: "Ya tienes una cuenta registrada." });
+        toast({ variant: "success", title: "Bienvenido de nuevo", description: "Ya tienes una cuenta registrada." });
         router.push('/dashboard');
         return;
       }
@@ -225,6 +225,7 @@ export default function SignupPage() {
       }
 
       toast({
+        variant: "success",
         title: "¡Registro Exitoso!",
         description: "Tu cuenta ha sido creada correctamente."
       });
@@ -236,7 +237,9 @@ export default function SignupPage() {
       if (error.code === 'auth/email-already-in-use') {
         description = "Este correo electrónico ya está en uso.";
       } else if (error.code === 'auth/weak-password') {
-        description = "La contraseña debe tener al menos 6 caracteres.";
+        description = "La contraseña debe tener al menos 8 caracteres, una mayúscula y un número.";
+      } else if (error.code === 'auth/password-does-not-meet-requirements') {
+        description = "La contraseña debe tener al menos 8 caracteres, una letra mayúscula, una minúscula y un número.";
       }
       toast({
         title: "Error de Registro",
@@ -416,7 +419,7 @@ export default function SignupPage() {
                           <FormLabel>*Contraseña:</FormLabel>
                           <FormControl>
                             <div className="relative">
-                              <Input className="w-full pr-10" type={showPassword ? "text" : "password"} {...field} />
+                              <Input className="w-full pr-10" type={showPassword ? "text" : "password"} {...field} placeholder="Mín. 8 caracteres, 1 mayúscula, 1 número" />
                               <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground">
                                 {showPassword ? <EyeOffRegular className="h-4 w-4" /> : <EyeRegular className="h-4 w-4" />}
                               </button>
